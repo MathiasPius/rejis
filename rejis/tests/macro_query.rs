@@ -129,13 +129,29 @@ fn multi_filtering_or_dsl() {
 }
 
 #[test]
-fn variable_query() {
+fn expr_query() {
     let db = user_database();
 
     let first_name = vec!["John"];
 
     let query = Q! {
         User.first_name == &first_name[0]
+    };
+
+    let johns = db.get(query).unwrap();
+
+    println!("{:#?}", johns);
+    assert_eq!(johns.len(), 2);
+}
+
+#[test]
+fn ident_query() {
+    let db = user_database();
+
+    let first_name = "John";
+
+    let query = Q! {
+        User.first_name == first_name
     };
 
     let johns = db.get(query).unwrap();

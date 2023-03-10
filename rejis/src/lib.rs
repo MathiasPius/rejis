@@ -53,6 +53,15 @@ macro_rules! Q {
              ) =>
         )
     };
+    ($out:expr => $op:tt $value:ident) => {
+        ::rejis::Q!(
+             ::rejis::Query::cmp(
+                 &$out,
+                 ::rejis::Op!{$op},
+                 $value,
+             ) =>
+        )
+    };
     ($out:expr => $op:tt $(tail:tt)*) => {
         ::rejis::Q!(
              ::rejis::Query::cmp(
