@@ -1,5 +1,4 @@
 use rejis::Q;
-use rejis::QQ;
 
 use rejis::Table;
 use testutils::user_database;
@@ -94,39 +93,32 @@ fn multi_filtering_dsl() {
 
     let johns = db
         .get(Q! {
-            User.first_name == "John" && User.last_name == "Smith"
+            (User.first_name == "John") && (User.last_name != "Smith")
         })
         .unwrap();
 
     println!("{:#?}", johns);
     assert_eq!(johns.len(), 1);
+    assert_eq!(johns[0].last_name, "Anderson");
 }
 
 #[test]
 fn multi_filtering_or_dsl() {
     let db = user_database();
 
+    let query = Q! {
+        (
+            (User.first_name == "John") && (User.last_name == "Smith")
+        ) ||
+        (
+            (User.first_name == "Thomas") && (User.last_name == "Anderson")
+        )
+    };
+
     let johns = db
-        .get(Q! {
-            (User.first_name == "John" && User.last_name == "Smith") ||
-            (User.first_name == "Thomas" && User.last_name == "Anderson")
-        })
+        .get(query)
         .unwrap();
 
     println!("{:#?}", johns);
     assert_eq!(johns.len(), 2);
-}
-
-#[test]
-fn querytest() {
-    let q = QQ! {
-        User.pets[0].name == "John" && User.first_name == "John" || User.last_name == "Smith"
-    };
-
-    println!("{q:#?}");
-
-    let db = user_database();
-
-    let res = db.get(q).unwrap();
-    println!("{:#?}", res);
 }
