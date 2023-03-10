@@ -1,14 +1,20 @@
 use rejis::Q;
+use rejis::QQ;
 
 mod utils {
     use rejis::{Queryable, Table};
     use serde::{Deserialize, Serialize};
 
+    #[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
+    pub struct Pet {
+        pub name: String,
+    }
+
     #[derive(Queryable, Table, Serialize, Deserialize, Debug, Clone)]
     pub struct User {
         pub first_name: String,
         pub last_name: String,
-        pub age: u8,
+        pub pets: Vec<Pet>,
     }
 }
 
@@ -100,4 +106,26 @@ fn multi_filtering_dsl() {
 
     println!("{:#?}", johns);
     assert_eq!(johns.len(), 1);
+}
+
+#[test]
+fn multi_filtering_or_dsl() {
+    let db = user_database();
+
+    let johns = db
+        .get(Q! {
+            (User.first_name == "John" && User.last_name == "Smith") ||
+            (User.first_name == "Thomas" && User.last_name == "Anderson")
+        })
+        .unwrap();
+
+    println!("{:#?}", johns);
+    assert_eq!(johns.len(), 2);
+}
+
+#[test]
+fn querytest() {
+    let q = QQ! {
+        User.pets[0].name
+    };
 }

@@ -4,7 +4,7 @@ pub mod path;
 mod query;
 
 pub use database::Database;
-pub use query::{Query, QueryConstructor, Queryable, Table};
+pub use query::*;
 pub use rejis_derive::{Queryable, Table};
 
 #[macro_export]
@@ -51,5 +51,76 @@ macro_rules! Q {
                 $($b)*
             }
         ));
+    };
+}
+
+/*
+#[macro_export]
+macro_rules! Segment {
+    {$root:ident} => {
+        $root::query()
+    };
+    {$root:ident, .$head:ident} => {
+        ::rejis::Segment!{$root}.$head
+    };
+    {$root:ident, $($prev_tokens:tt)+.$head:tt} => {
+        ::rejis::Segment!{$root, $($prev_tokens)*}.$head
+    };
+    {$root:ident, [$index:literal]} => {
+        ::rejis::Segment!{$root}.at($index)
+    };
+    {$root:ident, $($prev_index:tt)+ [$index:literal]} => {
+        ::rejis::Segment!{$root, $($prev_index)*}.at($index)
+    };
+}
+
+#[macro_export]
+macro_rules! Query {
+    {$root:ident $($tokens:tt)* } => {
+        &::rejis::Segment!($root, $($tokens)*)
+    };
+}
+*/
+/*
+#[macro_export]
+macro_rules!  Query {
+    {} => {};
+    {$out:expr} => {
+        $out
+    };
+    {$out:expr => .$head:ident $($tail:tt)*} => {
+        Query!{$out.$head => $(tail)*}
+    };
+    {$out:expr => [$index:literal]$($tail:tt)*} => {
+        Query!{$out.at($index) => $(tail)*}
+    };
+    {$root:ident ($tail:tt)*} => {
+        Query!{$root::query() => $(tail)*}
+    }
+}
+
+#[macro_export]
+macro_rules!  Query {
+    {$elem:tt} => {
+        stringify!($elem)
+    };
+    {($tail:tt)*} => {
+        println!(concat!((Query!{$tail})*));
+    };
+}
+*/
+#[macro_export]
+macro_rules! QQ {
+    ($out:expr => [$index:literal] $($tail:tt)*) => {
+        ::rejis::QQ!(::rejis::VecField::at(&$out, $index) => $($tail)*);
+    };
+    ($out:expr => .$next:tt $($tail:tt)*) => {
+        ::rejis::QQ!($out.$next => $($tail)*);
+    };
+    ($out:expr =>) => {
+        &$out
+    };
+    ($root:ident $($tail:tt)*) => {
+        ::rejis::QQ!($root::query() => $($tail)*);
     };
 }
