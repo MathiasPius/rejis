@@ -129,51 +129,17 @@ fn multi_filtering_or_dsl() {
 }
 
 #[test]
-fn search_in_array() {
+fn variable_query() {
     let db = user_database();
 
-    let mut stmt =
-        db.0.prepare(
-            "
-    with 
-        a as (
-            select user.rowid, user.value
-            from user, json_each(user.value, '$.pets')
-            where json_extract(json_each.value, '$.name') = 'Garfield'
-        ),
-        b as (
-            select user.rowid, user.value
-            from user
-            where json_extract(user.value, '$.first_name') = 'John'
-        ),
-        ab as (
-            select a.rowid, a.value 
-            from a
-            inner join b
-            on a.rowid = b.rowid
-        ),
-        c as (
-            select user.rowid, user.value
-            from user
-            where json_extract(user.value, '$.first_name') = 'Richard'
-        ),
-        ab_or_c as (
-            select * from ab
-            union all
-            select * from c
-        ),
-        result as (
-            select * from ab_or_c
-        )
-    select result.value from result
-    ",
-        )
-        .unwrap();
+    let first_name = vec!["John"];
 
-    let mut results = stmt.raw_query();
+    let query = Q! {
+        User.first_name == &first_name[0]
+    };
 
-    while let Some(result) = results.next().unwrap() {
-        let result: String = result.get(0).unwrap();
-        println!("{result}");
-    }
+    let johns = db.get(query).unwrap();
+
+    println!("{:#?}", johns);
+    assert_eq!(johns.len(), 2);
 }

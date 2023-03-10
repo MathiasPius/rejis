@@ -36,23 +36,32 @@ macro_rules! Q {
         ))
     };
     ($out:expr => $op:tt $value:literal) => {
-       ::rejis::Q!(
-            ::rejis::Query::cmp(
-                &$out,
-                ::rejis::Op!{$op},
-                $value
-            ) =>
-       )
+        ::rejis::Q!(
+             ::rejis::Query::cmp(
+                 &$out,
+                 ::rejis::Op!{$op},
+                 $value,
+             ) =>
+        )
+    };
+    ($out:expr => $op:tt &$value:expr) => {
+        ::rejis::Q!(
+             ::rejis::Query::cmp(
+                 &$out,
+                 ::rejis::Op!{$op},
+                 $value,
+             ) =>
+        )
     };
     ($out:expr => $op:tt $(tail:tt)*) => {
-        ::rejis::QQ!(
+        ::rejis::Q!(
              ::rejis::Query::cmp(
                  &$out,
                  ::rejis::Op!{$op},
                  Q!($($tail)*),
              ) =>
         )
-     };
+    };
     ($out:expr => [$index:literal] $($tail:tt)*) => {
         ::rejis::Q!(
             ::rejis::VecField::at(
