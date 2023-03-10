@@ -2,14 +2,14 @@
 use rusqlite::ToSql;
 
 use crate::{
-    filter::{Comparison, Operator},
+    filter::{Any, Comparison, Operator},
     path::Path,
 };
 use std::{fmt::Debug, marker::PhantomData, ops::Deref};
 
 /// Describes how to store the type for which it is implemented
 /// in an sqlite table.
-pub trait Table: Queryable<Self> + Debug + Sized {
+pub trait Table: Queryable<Self> + Debug + Sized + 'static {
     /// Name used for the table in the database when reading or writing
     /// this object to it.
     const TABLE_NAME: &'static str;
@@ -21,7 +21,7 @@ pub trait Table: Queryable<Self> + Debug + Sized {
 
 /// Indicates the `FieldQuery` struct which describes the json structure
 /// of the object.
-pub trait Queryable<Root>: Clone + Debug
+pub trait Queryable<Root>: Clone + Debug + 'static
 where
     Root: Table,
 {
@@ -96,6 +96,36 @@ where
     /// Construct a dot-separated json-path from this query.
     pub fn path(&self) -> &Path {
         &self.path
+    }
+}
+
+impl<Field, Root> Query<Vec<Field>, Root>
+where
+    Field: Queryable<Root> + Debug,
+    Vec<Field>: Queryable<Root>,
+    Root: Table,
+{
+    pub fn any<
+        InnerField: Queryable<Root>,
+        Value: Into<<InnerField::QueryType as QueryConstructor<Root>>::Inner>,
+        F: FnOnce(Query<Field, Root>) -> Query<InnerField, Root>,
+    >(
+        &self,
+        f: F,
+        operator: Operator,
+        value: Value,
+    ) -> Any<Vec<Field>, InnerField, Root>
+    where
+        <InnerField::QueryType as QueryConstructor<Root>>::Inner: ToSql + Debug,
+    {
+        let indexed = VecField::<Field, Root>::new::<Field>(&Path::default()).wildcard();
+
+        Any {
+            outer_query: self.clone(),
+            inner_query: f(indexed).clone(),
+            operator,
+            value: value.into(),
+        }
     }
 }
 
@@ -208,7 +238,16 @@ impl<T: Queryable<Root> + Debug, Root: Table> VecField<T, Root> {
         let path = self.0.path.join(index);
         Query {
             subquery: T::QueryType::new::<T>(&path),
-            path: self.0.path.join(index),
+            path,
+            _data: PhantomData::default(),
+        }
+    }
+
+    pub(crate) fn wildcard(&self) -> Query<T, Root> {
+        let path = Path::default();
+        Query {
+            subquery: T::QueryType::new::<T>(&path),
+            path,
             _data: PhantomData::default(),
         }
     }

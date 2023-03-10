@@ -1,7 +1,6 @@
 use rejis::{
     filter::And,
-    filter::Operator::{Equal, Like, NotEqual},
-    Table,
+    filter::Operator::{Equal, Like, NotEqual}, Table,
 };
 
 use crate::testutils::User;
@@ -11,11 +10,17 @@ mod testutils {
     use rusqlite::Connection;
     use serde::{Deserialize, Serialize};
 
+    #[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
+    pub struct Pet {
+        pub name: String,
+    }
+
     #[derive(Queryable, Table, Serialize, Deserialize, Debug, Clone)]
     pub struct User {
         pub first_name: String,
         pub last_name: String,
         pub age: u8,
+        pub pets: Vec<Pet>,
     }
 
     /// Utility function providing a database pre-seeded with a number of different users
@@ -30,6 +35,14 @@ mod testutils {
             first_name: String::from("John"),
             last_name: String::from("Smith"),
             age: 32,
+            pets: vec![
+                Pet {
+                    name: String::from("Garfield"),
+                },
+                Pet {
+                    name: String::from("Lucky"),
+                },
+            ],
         });
 
         // Jane Smith
@@ -37,6 +50,9 @@ mod testutils {
             first_name: String::from("Jane"),
             last_name: String::from("Smith"),
             age: 35,
+            pets: vec![Pet {
+                name: String::from("Jimmy"),
+            }],
         });
 
         // Thomas Anderson
@@ -44,6 +60,7 @@ mod testutils {
             first_name: String::from("Thomas"),
             last_name: String::from("Anderson"),
             age: 24,
+            pets: vec![],
         });
 
         // John Anderson
@@ -51,6 +68,7 @@ mod testutils {
             first_name: String::from("John"),
             last_name: String::from("Anderson"),
             age: 48,
+            pets: vec![],
         });
 
         // Richard LaFleur
@@ -58,6 +76,7 @@ mod testutils {
             first_name: String::from("Richard"),
             last_name: String::from("LaFleur"),
             age: 36,
+            pets: vec![],
         });
 
         db
@@ -134,4 +153,19 @@ fn like_matching() {
 
     // Should yield John Smith, Jane Smith and John Anderson
     assert_eq!(jays.len(), 3);
+}
+
+#[test]
+fn array_matching() {
+    let db = testutils::user_database();
+
+    let garfield_owners = db
+        .get(
+            User::query()
+                .pets
+                .any(|query| query.name.clone(), Like, "Garfield"),
+        )
+        .unwrap();
+
+    println!("{:#?}", garfield_owners);
 }

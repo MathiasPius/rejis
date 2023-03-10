@@ -159,3 +159,26 @@ fn ident_query() {
     println!("{:#?}", johns);
     assert_eq!(johns.len(), 2);
 }
+
+#[test]
+fn nested_json() {
+    let db = user_database();
+
+    let mut stmt =
+        db.0.prepare(
+            "
+        select distinct rowid, value from (
+            select user.rowid, user.value
+            from user, json_each(user.value, '$.pets')
+            where json_extract(json_each.value, '$.name') = 'Garfield'
+        )
+    ",
+        )
+        .unwrap();
+    let mut results = stmt.raw_query();
+
+    while let Some(result) = results.next().unwrap() {
+        let result: String = result.get(1).unwrap();
+        println!("{result:?}");
+    }
+}

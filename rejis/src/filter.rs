@@ -156,3 +156,54 @@ where
         )
     }
 }
+
+/// Describes comparison between the `Query` path of a `Root` object, given
+/// a comparable value and operator.
+#[derive(Debug)]
+pub struct Any<Field, InnerField, Root>
+where
+    Field: Queryable<Root>,
+    InnerField: Queryable<Root>,
+    Root: Table,
+    <InnerField::QueryType as QueryConstructor<Root>>::Inner: ToSql + Debug,
+{
+    pub(crate) outer_query: Query<Field, Root>,
+    pub(crate) inner_query: Query<InnerField, Root>,
+    pub(crate) operator: Operator,
+    pub(crate) value: <InnerField::QueryType as QueryConstructor<Root>>::Inner,
+}
+
+impl<Field, InnerField, Root> Filter<Root> for Any<Field, InnerField, Root>
+where
+    Field: Queryable<Root>,
+    InnerField: Queryable<Root>,
+    Root: Table,
+    <InnerField::QueryType as QueryConstructor<Root>>::Inner: ToSql + Debug,
+{
+    fn bind_parameters(
+        &self,
+        statement: &mut Statement<'_>,
+        index: &mut usize,
+    ) -> Result<(), rusqlite::Error> {
+        statement.raw_bind_parameter(*index, &self.value)?;
+        *index += 1;
+
+        Ok(())
+    }
+
+    fn statement(&self, name: &str, f: &mut impl Write) -> std::fmt::Result {
+        write!(
+            f,
+            ",\n    {name} as (
+        select distinct rowid, value from (
+            select root.rowid, root.value
+            from root, json_each(root.value, '{outer_path}')
+            where json_extract(json_each.value, '{inner_path}') {operator} ?
+        )
+    )",
+            outer_path = self.outer_query.path(),
+            inner_path = self.inner_query.path(),
+            operator = self.operator
+        )
+    }
+}
