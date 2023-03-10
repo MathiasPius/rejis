@@ -120,8 +120,13 @@ fn multi_filtering_or_dsl() {
 #[test]
 fn querytest() {
     let q = QQ! {
-        User.pets[0].name == "John" && User.first_name == "John" && User.last_name == "Smith"
+        User.pets[0].name == "John" && User.first_name == "John" || User.last_name == "Smith"
     };
 
     println!("{q:#?}");
+
+    let db = user_database();
+
+    let res = db.get(q).unwrap();
+    println!("{:#?}", res);
 }

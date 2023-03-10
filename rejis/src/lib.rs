@@ -117,6 +117,12 @@ macro_rules! QQ {
             QQ!($($tail)*)
         ))
     };
+    ($out:expr => || $($tail:tt)*) => {
+        ::rejis::filter::Or((
+            $out,
+            QQ!($($tail)*)
+        ))
+    };
     ($out:expr => == $value:literal $($tail:tt)*) => {
        ::rejis::QQ!(
             ::rejis::Query::cmp(
