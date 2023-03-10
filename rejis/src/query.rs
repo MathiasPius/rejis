@@ -84,7 +84,7 @@ where
         value: Value,
     ) -> Comparison<Field, Root>
     where
-        <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql,
+        <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql + Debug,
     {
         Comparison {
             query: self.clone(),

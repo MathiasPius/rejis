@@ -117,6 +117,8 @@ fn multi_property_inequality() {
         )))
         .unwrap();
 
+    println!("{john_smith:?}");
+
     assert_eq!(john_smith.len(), 1);
     assert_eq!(john_smith[0].first_name, "John");
     assert_eq!(john_smith[0].last_name, "Anderson");

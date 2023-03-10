@@ -1,3 +1,5 @@
+use std::fmt::{Debug, Display, Formatter};
+
 use rusqlite::{Statement, ToSql};
 
 use crate::query::{Query, QueryConstructor, Queryable, Table};
@@ -7,8 +9,7 @@ use crate::query::{Query, QueryConstructor, Queryable, Table};
 ///
 /// See [`Comparison`] which generates singular `A = B` clauses
 /// or [`And`] which itself composes multiple such statements.
-pub trait Filter<Root> {
-    fn sql_string(&self) -> String;
+pub trait Filter<Root>: Display {
     fn bind_parameters(
         &self,
         statement: &mut Statement<'_>,
@@ -17,6 +18,7 @@ pub trait Filter<Root> {
 }
 
 /// [`Comparison`] operator.
+#[derive(Debug, Clone, Copy)]
 pub enum Operator {
     Equal,
     NotEqual,
@@ -27,9 +29,9 @@ pub enum Operator {
     Like,
 }
 
-impl AsRef<str> for Operator {
-    fn as_ref(&self) -> &'static str {
-        match self {
+impl Display for Operator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
             Operator::Equal => "=",
             Operator::NotEqual => "!=",
             Operator::GreaterThan => ">",
@@ -37,17 +39,18 @@ impl AsRef<str> for Operator {
             Operator::LessThan => "<",
             Operator::LessThanOrEqual => "<=",
             Operator::Like => "like",
-        }
+        })
     }
 }
 
 /// Describes comparison between the `Query` path of a `Root` object, given
 /// a comparable value and operator.
+#[derive(Debug)]
 pub struct Comparison<Field, Root>
 where
     Field: Queryable<Root>,
     Root: Table,
-    <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql,
+    <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql + Debug,
 {
     pub(crate) query: Query<Field, Root>,
     pub(crate) operator: Operator,
@@ -58,13 +61,8 @@ impl<Field, Root> Filter<Root> for Comparison<Field, Root>
 where
     Field: Queryable<Root>,
     Root: Table,
-    <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql,
+    <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql + Debug,
 {
-    fn sql_string(&self) -> String {
-        let operator = self.operator.as_ref();
-        format!("json_extract(value, ?) {operator} ?")
-    }
-
     fn bind_parameters(
         &self,
         statement: &mut Statement<'_>,
@@ -79,19 +77,29 @@ where
     }
 }
 
-pub struct And<T>(pub T);
+impl<Field, Root> Display for Comparison<Field, Root>
+where
+    Field: Queryable<Root>,
+    Root: Table,
+    <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql + Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "(json_extract(value, ?) {operator} ?)",
+            operator = &self.operator
+        )
+    }
+}
+
+#[derive(Debug)]
+pub struct And<F>(pub F);
 
 impl<Root: Table, A, B> Filter<Root> for And<(A, B)>
 where
     A: Filter<Root>,
     B: Filter<Root>,
 {
-    fn sql_string(&self) -> String {
-        let f1 = self.0 .0.sql_string();
-        let f2 = self.0 .1.sql_string();
-        format!("({f1} and {f2})")
-    }
-
     fn bind_parameters(
         &self,
         statement: &mut Statement<'_>,
@@ -100,5 +108,15 @@ where
         self.0 .0.bind_parameters(statement, index)?;
         self.0 .1.bind_parameters(statement, index)?;
         Ok(())
+    }
+}
+
+impl<A, B> Display for And<(A, B)>
+where
+    A: Display,
+    B: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({f1} and {f2})", f1 = self.0 .0, f2 = self.0 .1)
     }
 }

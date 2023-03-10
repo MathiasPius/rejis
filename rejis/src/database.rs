@@ -43,15 +43,20 @@ impl Database {
     }
 
     /// Fetch `Root` object(s) using the given filter
-    pub fn get<Root>(&self, filter: impl Filter<Root>) -> Result<Vec<Root>, rusqlite::Error>
+    pub fn get<Root>(
+        &self,
+        filter: impl Filter<Root> + std::fmt::Debug,
+    ) -> Result<Vec<Root>, rusqlite::Error>
     where
         Root: Table + DeserializeOwned,
     {
         let sql = format!(
             "select value from {table} where {filters}",
             table = Root::TABLE_NAME,
-            filters = filter.sql_string()
+            filters = filter.to_string()
         );
+        println!("{sql}");
+        println!("{:#?}", filter);
 
         let mut stmt = self.0.prepare(&sql).unwrap();
         filter.bind_parameters(&mut stmt, &mut 1)?;
