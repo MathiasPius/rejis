@@ -1,13 +1,14 @@
 use rejis::{
     filter::And,
     filter::Operator::{Equal, Like, NotEqual},
-    Database, Table,
+    Table,
 };
-use rusqlite::Connection;
-use utils::User;
 
-mod utils {
-    use rejis::{Queryable, Table};
+use crate::testutils::User;
+
+mod testutils {
+    use rejis::{Database, Queryable, Table};
+    use rusqlite::Connection;
     use serde::{Deserialize, Serialize};
 
     #[derive(Queryable, Table, Serialize, Deserialize, Debug, Clone)]
@@ -16,56 +17,56 @@ mod utils {
         pub last_name: String,
         pub age: u8,
     }
-}
 
-/// Utility function providing a database pre-seeded with a number of different users
-fn user_database() -> Database {
-    // Open an in-memory database, create the table and populate it with
-    // three users.
-    let db = Database::new(Connection::open_in_memory().unwrap());
-    db.create_table::<User>().unwrap();
+    /// Utility function providing a database pre-seeded with a number of different users
+    pub fn user_database() -> Database {
+        // Open an in-memory database, create the table and populate it with
+        // three users.
+        let db = Database::new(Connection::open_in_memory().unwrap());
+        db.create_table::<User>().unwrap();
 
-    // John Smith
-    db.insert(User {
-        first_name: String::from("John"),
-        last_name: String::from("Smith"),
-        age: 32,
-    });
+        // John Smith
+        db.insert(User {
+            first_name: String::from("John"),
+            last_name: String::from("Smith"),
+            age: 32,
+        });
 
-    // Jane Smith
-    db.insert(User {
-        first_name: String::from("Jane"),
-        last_name: String::from("Smith"),
-        age: 35,
-    });
+        // Jane Smith
+        db.insert(User {
+            first_name: String::from("Jane"),
+            last_name: String::from("Smith"),
+            age: 35,
+        });
 
-    // Thomas Anderson
-    db.insert(User {
-        first_name: String::from("Thomas"),
-        last_name: String::from("Anderson"),
-        age: 24,
-    });
+        // Thomas Anderson
+        db.insert(User {
+            first_name: String::from("Thomas"),
+            last_name: String::from("Anderson"),
+            age: 24,
+        });
 
-    // John Anderson
-    db.insert(User {
-        first_name: String::from("John"),
-        last_name: String::from("Anderson"),
-        age: 48,
-    });
+        // John Anderson
+        db.insert(User {
+            first_name: String::from("John"),
+            last_name: String::from("Anderson"),
+            age: 48,
+        });
 
-    // Richard LaFleur
-    db.insert(User {
-        first_name: String::from("Richard"),
-        last_name: String::from("LaFleur"),
-        age: 36,
-    });
+        // Richard LaFleur
+        db.insert(User {
+            first_name: String::from("Richard"),
+            last_name: String::from("LaFleur"),
+            age: 36,
+        });
 
-    db
+        db
+    }
 }
 
 #[test]
 fn single_property_equality() {
-    let db = user_database();
+    let db = testutils::user_database();
 
     let johns = db.get(User::query().first_name.cmp(Equal, "John")).unwrap();
 
@@ -75,7 +76,7 @@ fn single_property_equality() {
 
 #[test]
 fn single_property_inequality() {
-    let db = user_database();
+    let db = testutils::user_database();
 
     let non_smiths = db
         .get(User::query().last_name.cmp(NotEqual, "Smith"))
@@ -89,7 +90,7 @@ fn single_property_inequality() {
 
 #[test]
 fn multi_property_equality() {
-    let db = user_database();
+    let db = testutils::user_database();
 
     // Find all John Smiths
     let john_smith = db
@@ -107,7 +108,7 @@ fn multi_property_equality() {
 
 #[test]
 fn multi_property_inequality() {
-    let db = user_database();
+    let db = testutils::user_database();
 
     // Find all non-Smith Johns
     let john_smith = db
@@ -127,7 +128,7 @@ fn multi_property_inequality() {
 
 #[test]
 fn like_matching() {
-    let db = user_database();
+    let db = testutils::user_database();
 
     let jays = db.get(User::query().first_name.cmp(Like, "J%")).unwrap();
 

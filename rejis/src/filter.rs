@@ -120,3 +120,32 @@ where
         write!(f, "({f1} and {f2})", f1 = self.0 .0, f2 = self.0 .1)
     }
 }
+
+#[derive(Debug)]
+pub struct Or<F>(pub F);
+
+impl<Root: Table, A, B> Filter<Root> for Or<(A, B)>
+where
+    A: Filter<Root>,
+    B: Filter<Root>,
+{
+    fn bind_parameters(
+        &self,
+        statement: &mut Statement<'_>,
+        index: &mut usize,
+    ) -> Result<(), rusqlite::Error> {
+        self.0 .0.bind_parameters(statement, index)?;
+        self.0 .1.bind_parameters(statement, index)?;
+        Ok(())
+    }
+}
+
+impl<A, B> Display for Or<(A, B)>
+where
+    A: Display,
+    B: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({f1} or {f2})", f1 = self.0 .0, f2 = self.0 .1)
+    }
+}
