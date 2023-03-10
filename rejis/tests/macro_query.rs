@@ -1,8 +1,13 @@
 use rejis::Q;
 use rejis::QQ;
 
-mod utils {
-    use rejis::{Queryable, Table};
+use rejis::Table;
+use testutils::user_database;
+use testutils::User;
+
+mod testutils {
+    use rejis::{Database, Queryable, Table};
+    use rusqlite::Connection;
     use serde::{Deserialize, Serialize};
 
     #[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
@@ -14,24 +19,8 @@ mod utils {
     pub struct User {
         pub first_name: String,
         pub last_name: String,
-        pub pets: Vec<Pet>,
-    }
-}
-
-use rejis::Table;
-use testutils::user_database;
-use utils::User;
-
-mod testutils {
-    use rejis::{Database, Queryable, Table};
-    use rusqlite::Connection;
-    use serde::{Deserialize, Serialize};
-
-    #[derive(Queryable, Table, Serialize, Deserialize, Debug, Clone)]
-    pub struct User {
-        pub first_name: String,
-        pub last_name: String,
         pub age: u8,
+        pub pets: Vec<Pet>,
     }
 
     /// Utility function providing a database pre-seeded with a number of different users
@@ -46,6 +35,7 @@ mod testutils {
             first_name: String::from("John"),
             last_name: String::from("Smith"),
             age: 32,
+            pets: vec![],
         });
 
         // Jane Smith
@@ -53,6 +43,7 @@ mod testutils {
             first_name: String::from("Jane"),
             last_name: String::from("Smith"),
             age: 35,
+            pets: vec![],
         });
 
         // Thomas Anderson
@@ -60,6 +51,7 @@ mod testutils {
             first_name: String::from("Thomas"),
             last_name: String::from("Anderson"),
             age: 24,
+            pets: vec![],
         });
 
         // John Anderson
@@ -67,6 +59,7 @@ mod testutils {
             first_name: String::from("John"),
             last_name: String::from("Anderson"),
             age: 48,
+            pets: vec![],
         });
 
         // Richard LaFleur
@@ -74,6 +67,7 @@ mod testutils {
             first_name: String::from("Richard"),
             last_name: String::from("LaFleur"),
             age: 36,
+            pets: vec![],
         });
 
         db
@@ -126,6 +120,8 @@ fn multi_filtering_or_dsl() {
 #[test]
 fn querytest() {
     let q = QQ! {
-        User.pets[0].name
+        User.pets[0].name == "John" && User.first_name == "John" && User.last_name == "Smith"
     };
+
+    println!("{q:#?}");
 }

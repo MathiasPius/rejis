@@ -111,14 +111,34 @@ macro_rules!  Query {
 */
 #[macro_export]
 macro_rules! QQ {
+    ($out:expr => && $($tail:tt)*) => {
+        ::rejis::filter::And((
+            $out,
+            QQ!($($tail)*)
+        ))
+    };
+    ($out:expr => == $value:literal $($tail:tt)*) => {
+       ::rejis::QQ!(
+            ::rejis::Query::cmp(
+                &$out, 
+                ::rejis::filter::Operator::Equal,
+                $value
+            ) => $($tail)*
+       )
+    };
     ($out:expr => [$index:literal] $($tail:tt)*) => {
-        ::rejis::QQ!(::rejis::VecField::at(&$out, $index) => $($tail)*);
+        ::rejis::QQ!(
+            ::rejis::VecField::at(
+                ::std::ops::Deref::deref(&$out),
+                $index
+            ) => $($tail)*
+        );
     };
     ($out:expr => .$next:tt $($tail:tt)*) => {
         ::rejis::QQ!($out.$next => $($tail)*);
     };
     ($out:expr =>) => {
-        &$out
+        $out
     };
     ($root:ident $($tail:tt)*) => {
         ::rejis::QQ!($root::query() => $($tail)*);
