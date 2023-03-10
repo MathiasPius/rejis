@@ -170,6 +170,7 @@ unit_field_impl!(i32, I32Query);
 unit_field_impl!(i64, I64Query);
 unit_field_impl!(i128, I128Query);
 unit_field_impl!(isize, IsizeQuery);
+unit_field_impl!(bool, BoolQuery);
 
 /// A struct field of type [`Vec`]
 #[derive(Debug, Clone)]

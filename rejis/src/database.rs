@@ -8,7 +8,7 @@ use crate::{
 
 /// Wrapper around a [`Connection`] which enables interaction
 /// with the underlying database using the `rejis` system.
-pub struct Database(pub(crate) Connection);
+pub struct Database(pub Connection);
 
 impl Database {
     /// Consume an existing [`Connection`] and wrap it in a `rejis` database accessor.
@@ -50,15 +50,7 @@ impl Database {
     where
         Root: Table + DeserializeOwned,
     {
-        let sql = format!(
-            "select value from {table} where {filters}",
-            table = Root::TABLE_NAME,
-            filters = filter.to_string()
-        );
-        println!("{sql}");
-        println!("{:#?}", filter);
-
-        let mut stmt = self.0.prepare(&sql).unwrap();
+        let mut stmt = self.0.prepare(&filter.statement())?;
         filter.bind_parameters(&mut stmt, &mut 1)?;
 
         let mut objects = Vec::new();

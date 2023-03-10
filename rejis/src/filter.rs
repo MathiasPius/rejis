@@ -9,12 +9,20 @@ use crate::query::{Query, QueryConstructor, Queryable, Table};
 ///
 /// See [`Comparison`] which generates singular `A = B` clauses
 /// or [`And`] which itself composes multiple such statements.
-pub trait Filter<Root>: Display {
+pub trait Filter<Root: Table>: Display {
     fn bind_parameters(
         &self,
         statement: &mut Statement<'_>,
         index: &mut usize,
     ) -> Result<(), rusqlite::Error>;
+
+    fn statement(&self) -> String {
+        format!(
+            "select value from {table} where {filters}",
+            table = Root::TABLE_NAME,
+            filters = self.to_string()
+        )
+    }
 }
 
 /// [`Comparison`] operator.
@@ -74,6 +82,14 @@ where
         *index += 1;
 
         Ok(())
+    }
+
+    fn statement(&self) -> String {
+        format!(
+            "select value from {table} where {filters}",
+            table = Root::TABLE_NAME,
+            filters = self.to_string()
+        )
     }
 }
 

@@ -34,7 +34,14 @@ mod testutils {
             first_name: String::from("John"),
             last_name: String::from("Smith"),
             age: 32,
-            pets: vec![],
+            pets: vec![
+                Pet {
+                    name: String::from("Garfield"),
+                },
+                Pet {
+                    name: String::from("Lucky"),
+                },
+            ],
         });
 
         // Jane Smith
@@ -115,10 +122,58 @@ fn multi_filtering_or_dsl() {
         )
     };
 
-    let johns = db
-        .get(query)
-        .unwrap();
+    let johns = db.get(query).unwrap();
 
     println!("{:#?}", johns);
     assert_eq!(johns.len(), 2);
+}
+
+#[test]
+fn search_in_array() {
+    let db = user_database();
+
+    let mut stmt =
+    db.0.prepare(
+        "
+    with 
+        a as (
+            select user.rowid, user.value
+            from user, json_each(user.value, '$.pets')
+            where json_extract(json_each.value, '$.name') = 'Garfield'
+        ),
+        b as (
+            select user.rowid, user.value
+            from user
+            where json_extract(user.value, '$.first_name') = 'John'
+        ),
+        ab as (
+            select a.rowid, a.value 
+            from a
+            inner join b
+            on a.rowid = b.rowid
+        ),
+        c as (
+            select user.rowid, user.value
+            from user
+            where json_extract(user.value, '$.first_name') = 'Richard'
+        ),
+        ab_or_c as (
+            select * from ab
+            union all
+            select * from c
+        ),
+        result as (
+            select * from ab_or_c
+        )
+    select result.value from result
+    ",
+    )
+    .unwrap();
+
+    let mut results = stmt.raw_query();
+
+    while let Some(result) = results.next().unwrap() {
+        let result: String = result.get(0).unwrap();
+        println!("{result}");
+    }
 }
