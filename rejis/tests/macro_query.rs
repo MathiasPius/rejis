@@ -170,11 +170,43 @@ fn ident_query() {
 }
 
 #[test]
-fn any_query() {
+fn any_query_literal() {
     let db = user_database();
 
     let garfields = Q! {
         User.pets[..].name == "Garfield"
+    };
+
+    let garfield_owners = db.get(garfields).unwrap();
+
+    println!("{:#?}", garfield_owners);
+    assert_eq!(garfield_owners.len(), 1);
+}
+
+#[test]
+fn any_query_ident() {
+    let db = user_database();
+
+    let name = "Garfield";
+
+    let garfields = Q! {
+        User.pets[..].name == name
+    };
+
+    let garfield_owners = db.get(garfields).unwrap();
+
+    println!("{:#?}", garfield_owners);
+    assert_eq!(garfield_owners.len(), 1);
+}
+
+#[test]
+fn any_query_complex() {
+    let db = user_database();
+
+    let name = vec!["Garfield"];
+
+    let garfields = Q! {
+        User.pets[..].name == &name[0]
     };
 
     let garfield_owners = db.get(garfields).unwrap();

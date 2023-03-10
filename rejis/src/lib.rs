@@ -79,14 +79,70 @@ macro_rules! Q {
             ) =>
         );
     };
-    ($out:expr => [..]$(.$sub:ident)+ $op:tt $value:literal $($tail:tt)*) => {
+    // User.pets[..].name == "Value"
+    ($out:expr => [..]$(.$sub:ident)+ $op:tt $value:literal) => {
         ::rejis::Q!(
             ::rejis::Query::any(
                 &$out,
                 |query| query$(.$sub)*.clone(),
                 ::rejis::Op!{$op},
                 $value,
-            ) => $($tail)*
+            ) =>
+       )
+    };
+    // User.pets[..].name == &names[0]
+    ($out:expr => [..]$(.$sub:ident)+ $op:tt &$value:expr) => {
+        ::rejis::Q!(
+            ::rejis::Query::any(
+                &$out,
+                |query| query$(.$sub)*.clone(),
+                ::rejis::Op!{$op},
+                $value,
+            ) =>
+       )
+    };
+    // User.pets[..].name == name
+    ($out:expr => [..]$(.$sub:ident)+ $op:tt $value:ident) => {
+        ::rejis::Q!(
+            ::rejis::Query::any(
+                &$out,
+                |query| query$(.$sub)*.clone(),
+                ::rejis::Op!{$op},
+                $value,
+            ) =>
+       )
+    };
+    // User.pets[..] == "Value"
+    ($out:expr => [..] $op:tt $value:literal) => {
+        ::rejis::Q!(
+            ::rejis::Query::any(
+                &$out,
+                |query| query.clone(),
+                ::rejis::Op!{$op},
+                $value,
+            ) =>
+       )
+    };
+    // User.pets[..] == &name[0]
+    ($out:expr => [..] $op:tt &$value:expr) => {
+        ::rejis::Q!(
+            ::rejis::Query::any(
+                &$out,
+                |query| query.clone(),
+                ::rejis::Op!{$op},
+                $value,
+            ) =>
+       )
+    };
+    // User.pets[..] == name
+    ($out:expr => [..] $op:tt $value:ident) => {
+        ::rejis::Q!(
+            ::rejis::Query::any(
+                &$out,
+                |query| query.clone(),
+                ::rejis::Op!{$op},
+                $value,
+            ) =>
        )
     };
     ($out:expr => .$next:tt $($tail:tt)*) => {
