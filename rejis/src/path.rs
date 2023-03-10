@@ -46,7 +46,7 @@ impl Display for Path {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("$")?;
         for field in &self.0 {
-            write!(f, "{}", field)?;
+            write!(f, "{field}")?;
         }
 
         Ok(())

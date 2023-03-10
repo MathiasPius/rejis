@@ -73,7 +73,7 @@ where
     pub fn new(path: Path) -> Self {
         Query {
             subquery: Field::QueryType::new::<Field>(&path),
-            path: path,
+            path,
             _data: PhantomData,
         }
     }
@@ -122,7 +122,7 @@ where
 
         Any {
             outer_query: self.clone(),
-            inner_query: f(indexed).clone(),
+            inner_query: f(indexed),
             operator,
             value: value.into(),
         }

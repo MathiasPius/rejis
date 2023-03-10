@@ -71,13 +71,23 @@ macro_rules! Q {
              ) =>
         )
     };
-    ($out:expr => [$index:literal] $($tail:tt)*) => {
+    ($out:expr => [$index:literal]) => {
         ::rejis::Q!(
             ::rejis::VecField::at(
                 ::std::ops::Deref::deref(&$out),
                 $index
-            ) => $($tail)*
+            ) =>
         );
+    };
+    ($out:expr => [..]$(.$sub:ident)+ $op:tt $value:literal $($tail:tt)*) => {
+        ::rejis::Q!(
+            ::rejis::Query::any(
+                &$out,
+                |query| query$(.$sub)*.clone(),
+                ::rejis::Op!{$op},
+                $value,
+            ) => $($tail)*
+       )
     };
     ($out:expr => .$next:tt $($tail:tt)*) => {
         ::rejis::Q!($out.$next => $($tail)*);

@@ -49,7 +49,14 @@ mod testutils {
             first_name: String::from("Jane"),
             last_name: String::from("Smith"),
             age: 35,
-            pets: vec![],
+            pets: vec![
+                Pet {
+                    name: String::from("Jimmy"),
+                },
+                Pet {
+                    name: String::from("Jimmy"),
+                },
+            ],
         });
 
         // Thomas Anderson
@@ -65,7 +72,9 @@ mod testutils {
             first_name: String::from("John"),
             last_name: String::from("Anderson"),
             age: 48,
-            pets: vec![],
+            pets: vec![Pet {
+                name: String::from("Jimmy"),
+            }],
         });
 
         // Richard LaFleur
@@ -161,24 +170,44 @@ fn ident_query() {
 }
 
 #[test]
-fn nested_json() {
+fn any_query() {
     let db = user_database();
 
-    let mut stmt =
-        db.0.prepare(
-            "
-        select distinct rowid, value from (
-            select user.rowid, user.value
-            from user, json_each(user.value, '$.pets')
-            where json_extract(json_each.value, '$.name') = 'Garfield'
-        )
-    ",
-        )
-        .unwrap();
-    let mut results = stmt.raw_query();
+    let garfields = Q! {
+        User.pets[..].name == "Garfield"
+    };
 
-    while let Some(result) = results.next().unwrap() {
-        let result: String = result.get(1).unwrap();
-        println!("{result:?}");
-    }
+    let garfield_owners = db.get(garfields).unwrap();
+
+    println!("{:#?}", garfield_owners);
+    assert_eq!(garfield_owners.len(), 1);
+}
+
+#[test]
+fn any_query_multiples() {
+    let db = user_database();
+
+    let jimmies = Q! {
+        User.pets[..].name == "Jimmy"
+    };
+
+    let jimmy_owners = db.get(jimmies).unwrap();
+
+    println!("{:#?}", jimmy_owners);
+    assert_eq!(jimmy_owners.len(), 2);
+}
+
+#[test]
+fn complex_any_query() {
+    let db = user_database();
+
+    let jane = Q! {
+        (User.pets[..].name == "Jimmy") && (User.last_name == "Smith")
+    };
+
+    let jane = db.get(jane).unwrap();
+
+    println!("{:#?}", jane);
+    assert_eq!(jane.len(), 1);
+    println!("{:#?}", jane[0]);
 }

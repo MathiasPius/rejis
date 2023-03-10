@@ -1,6 +1,7 @@
 use rejis::{
     filter::And,
-    filter::Operator::{Equal, Like, NotEqual}, Table,
+    filter::Operator::{Equal, Like, NotEqual},
+    Table,
 };
 
 use crate::testutils::User;
@@ -50,9 +51,14 @@ mod testutils {
             first_name: String::from("Jane"),
             last_name: String::from("Smith"),
             age: 35,
-            pets: vec![Pet {
-                name: String::from("Jimmy"),
-            }],
+            pets: vec![
+                Pet {
+                    name: String::from("Jimmy"),
+                },
+                Pet {
+                    name: String::from("Jimmy"),
+                },
+            ],
         });
 
         // Thomas Anderson
@@ -68,7 +74,9 @@ mod testutils {
             first_name: String::from("John"),
             last_name: String::from("Anderson"),
             age: 48,
-            pets: vec![],
+            pets: vec![Pet {
+                name: String::from("Jimmy"),
+            }],
         });
 
         // Richard LaFleur
@@ -163,7 +171,7 @@ fn array_matching() {
         .get(
             User::query()
                 .pets
-                .any(|query| query.name.clone(), Like, "Garfield"),
+                .any(|query| query.name.clone(), Like, "Jimmy"),
         )
         .unwrap();
 
