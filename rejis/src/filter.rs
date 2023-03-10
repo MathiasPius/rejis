@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Display, Formatter, Write};
 
 use rusqlite::{Statement, ToSql};
 
@@ -16,13 +16,7 @@ pub trait Filter<Root: Table>: Display {
         index: &mut usize,
     ) -> Result<(), rusqlite::Error>;
 
-    fn statement(&self) -> String {
-        format!(
-            "select value from {table} where {filters}",
-            table = Root::TABLE_NAME,
-            filters = self.to_string()
-        )
-    }
+    fn statement(&self, name: &str, f: &mut impl Write) -> std::fmt::Result;
 }
 
 /// [`Comparison`] operator.
@@ -76,19 +70,22 @@ where
         statement: &mut Statement<'_>,
         index: &mut usize,
     ) -> Result<(), rusqlite::Error> {
-        statement.raw_bind_parameter(*index, self.query.path().to_string())?;
-        *index += 1;
         statement.raw_bind_parameter(*index, &self.value)?;
         *index += 1;
 
         Ok(())
     }
 
-    fn statement(&self) -> String {
-        format!(
-            "select value from {table} where {filters}",
-            table = Root::TABLE_NAME,
-            filters = self.to_string()
+    fn statement(&self, name: &str, f: &mut impl Write) -> std::fmt::Result {
+        write!(
+            f,
+            ",\n    {name} as (
+        select root.rowid, root.value
+        from root
+        where json_extract(root.value, '{path}') {operator} ?
+    )",
+            path = self.query.path(),
+            operator = self.operator
         )
     }
 }
@@ -125,6 +122,21 @@ where
         self.0 .1.bind_parameters(statement, index)?;
         Ok(())
     }
+
+    fn statement(&self, name: &str, f: &mut impl Write) -> std::fmt::Result {
+        self.0 .0.statement(&format!("{name}_a"), f)?;
+        self.0 .1.statement(&format!("{name}_b"), f)?;
+
+        write!(
+            f,
+            ",\n    {name} as (
+        select {name}_a.rowid, {name}_a.value
+        from {name}_a
+        inner join {name}_b
+        on {name}_a.rowid = {name}_b.rowid
+    )"
+        )
+    }
 }
 
 impl<A, B> Display for And<(A, B)>
@@ -153,6 +165,20 @@ where
         self.0 .0.bind_parameters(statement, index)?;
         self.0 .1.bind_parameters(statement, index)?;
         Ok(())
+    }
+
+    fn statement(&self, name: &str, f: &mut impl Write) -> std::fmt::Result {
+        self.0 .0.statement(&format!("{name}_a"), f)?;
+        self.0 .1.statement(&format!("{name}_b"), f)?;
+
+        write!(
+            f,
+            ",\n    {name} as (
+        select * from {name}_a
+        union all
+        select * from {name}_b
+    )"
+        )
     }
 }
 

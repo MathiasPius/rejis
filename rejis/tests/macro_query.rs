@@ -133,8 +133,8 @@ fn search_in_array() {
     let db = user_database();
 
     let mut stmt =
-    db.0.prepare(
-        "
+        db.0.prepare(
+            "
     with 
         a as (
             select user.rowid, user.value
@@ -167,8 +167,8 @@ fn search_in_array() {
         )
     select result.value from result
     ",
-    )
-    .unwrap();
+        )
+        .unwrap();
 
     let mut results = stmt.raw_query();
 

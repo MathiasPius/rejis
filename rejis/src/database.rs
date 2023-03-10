@@ -1,5 +1,6 @@
 use rusqlite::Connection;
 use serde::{de::DeserializeOwned, Serialize};
+use std::fmt::Write;
 
 use crate::{
     filter::Filter,
@@ -50,7 +51,21 @@ impl Database {
     where
         Root: Table + DeserializeOwned,
     {
-        let mut stmt = self.0.prepare(&filter.statement())?;
+        let mut sql = format!(
+            "
+with
+    root as (
+        select rowid, value
+        from {table}
+    )",
+            table = Root::TABLE_NAME
+        );
+        filter.statement("result", &mut sql).unwrap();
+        write!(&mut sql, "\nselect result.value from result").unwrap();
+
+        println!("{sql}");
+
+        let mut stmt = self.0.prepare(&sql)?;
         filter.bind_parameters(&mut stmt, &mut 1)?;
 
         let mut objects = Vec::new();
