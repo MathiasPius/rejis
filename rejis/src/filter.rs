@@ -9,7 +9,7 @@ use crate::query::{Query, QueryConstructor, Queryable, Table};
 ///
 /// See [`Comparison`] which generates singular `A = B` clauses
 /// or [`And`] which itself composes multiple such statements.
-pub trait Filter<Root: Table>: Display {
+pub trait Filter<Root: Table> {
     fn bind_parameters(
         &self,
         statement: &mut Statement<'_>,
@@ -90,21 +90,6 @@ where
     }
 }
 
-impl<Field, Root> Display for Comparison<Field, Root>
-where
-    Field: Queryable<Root>,
-    Root: Table,
-    <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql + Debug,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "(json_extract(value, ?) {operator} ?)",
-            operator = &self.operator
-        )
-    }
-}
-
 #[derive(Debug)]
 pub struct And<F>(pub F);
 
@@ -139,16 +124,6 @@ where
     }
 }
 
-impl<A, B> Display for And<(A, B)>
-where
-    A: Display,
-    B: Display,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({f1} and {f2})", f1 = self.0 .0, f2 = self.0 .1)
-    }
-}
-
 #[derive(Debug)]
 pub struct Or<F>(pub F);
 
@@ -179,15 +154,5 @@ where
         select * from {name}_b
     )"
         )
-    }
-}
-
-impl<A, B> Display for Or<(A, B)>
-where
-    A: Display,
-    B: Display,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({f1} or {f2})", f1 = self.0 .0, f2 = self.0 .1)
     }
 }
