@@ -25,7 +25,7 @@ jobs:
     name: ${{ matrix.toolchain }} / clippy
     permissions:
       contents: read
-      statuses: write
+      checks: write
     strategy:
       fail-fast: false
       matrix:
