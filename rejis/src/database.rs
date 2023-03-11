@@ -86,7 +86,7 @@ impl Database {
         let mut objects = Vec::new();
         let mut rows = stmt.raw_query();
         while let Some(result) = rows.next()? {
-            objects.push(select.extract(&result).unwrap());
+            objects.push(select.extract(result).unwrap());
         }
 
         Ok(objects)

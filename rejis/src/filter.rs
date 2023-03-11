@@ -79,7 +79,7 @@ where
     fn clone(&self) -> Self {
         Self {
             query: self.query.clone(),
-            operator: self.operator.clone(),
+            operator: self.operator,
             value: self.value.clone(),
         }
     }
@@ -242,7 +242,7 @@ where
         Self {
             outer_query: self.outer_query.clone(),
             inner_query: self.inner_query.clone(),
-            operator: self.operator.clone(),
+            operator: self.operator,
             value: self.value.clone(),
         }
     }
