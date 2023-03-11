@@ -53,37 +53,36 @@ built on top of it, to reduce database roundtrips.
   same object is inserted multiple times.
 
 * **Querying**
+
   Filtering can either be done using the plain Query API:
   ```rust
   let john_not_smith = db
-    .get(And((
+    .get(&And((
       User::query().first_name.cmp(Equal, "John"),
       User::query().last_name.cmp(NotEqual, "Smith"),
     )))?;
   ```
   Or using the DSL implemented by the `Q!` macro:
   ```rust
-  let john_not_smith = db.get(Q!{
+  let john_not_smith = db.get(&Q!{
     (User.first_name == "John") && (User.last_name != "Smith")
   })?;
   ```
   Note that `db.get` always returns a `Vec` of results.
 
-
-# Roadmap
 * **Deleting entries**
-
-  Right now only insertion and queries are supported.
   ```rust
   // Delete all the Johns!
-  db.delete(Q! {
+  db.delete(&Q! {
     User.first_name == "John"
   });
   ```
+
+# Roadmap
 * **Updating/replacing entire entries**
   ```rust
   // Replace John Smith with Jane Doe
-  db.replace(Q! {
+  db.replace(&Q! {
     (User.first_name == "John") && (User.last_name == "Smith")
   }, User {
     first_name: "Jane".to_string(),
@@ -101,8 +100,8 @@ built on top of it, to reduce database roundtrips.
   ```rust
   // Last names of everyone named John
   let last_name: Vec<String> = db
-    .get(Q! { User.first_name == "John" })
-    .map(Q! { User.last_name });
+    .get(&Q! { User.first_name == "John" })
+    .map(&Q! { User.last_name });
   ```
 
 * **Partial updates**
@@ -113,9 +112,9 @@ built on top of it, to reduce database roundtrips.
   // Uppercase all the last names of people called John
   db.modify(
     // Select specific rows
-    Q! { User.first_name == "John" },
+    &Q! { User.first_name == "John" },
     // Target the last_name specifically for replacement
-    Q! { User.last_name },
+    &Q! { User.last_name },
     // Provide a function for how the name should be transformed.
     |last_name| last_name.to_uppercase()
   );
