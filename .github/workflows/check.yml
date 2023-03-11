@@ -23,6 +23,8 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     name: ${{ matrix.toolchain }} / clippy
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -59,6 +61,8 @@ jobs:
   hack:
     runs-on: ubuntu-latest
     name: ubuntu / stable / features
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v3
         with:
@@ -74,6 +78,8 @@ jobs:
           args: --feature-powerset check --lib --tests
   msrv:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     # we use a matrix here just because env can't be used in job names
     # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
     strategy:
