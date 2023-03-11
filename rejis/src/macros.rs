@@ -1,4 +1,4 @@
-/// Translates a comparison operator token into a [`::rejis::filter::Operator`]
+/// Translates a comparison operator token into an `Operator`
 #[macro_export]
 macro_rules! Op {
     {==} => {::rejis::filter::Operator::Equal};
