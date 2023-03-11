@@ -164,6 +164,7 @@ where
 
 macro_rules! unit_field_impl {
     ($inner:ident, $field_type: ident) => {
+        #[doc = concat!("Implementation of [`Queryable`] for `", stringify!($inner), "`")]
         #[derive(Debug, Clone)]
         pub struct $field_type;
 

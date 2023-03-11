@@ -14,6 +14,9 @@ macro_rules! Op {
 }
 
 /// DSL for building queries in a more human-readable way
+///
+/// See tests in `tests/macro_query.rs` for examples on how to
+/// use it.
 #[macro_export]
 macro_rules! Q {
     // AND operator support. Both sides of the comparison must be
