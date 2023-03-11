@@ -28,11 +28,11 @@ pub trait Table: Queryable<Self> + Debug + Sized + 'static {
 /// describing said member.
 ///
 /// Can (and should) be automatically derived when possible.
-pub trait Queryable<Root>: Clone + Debug + 'static
+pub trait Queryable<Root>: Clone + 'static
 where
     Root: Table,
 {
-    type QueryType: QueryConstructor<Root> + Clone + Debug;
+    type QueryType: QueryConstructor<Root> + Clone;
 }
 
 /// Typed construction of JSON Path based on `Queryable` structs.
@@ -43,7 +43,7 @@ where
 ///
 /// Maintains a reference to the `Root` [`Table`] type, so receiving database
 /// functions can deduce which table's structure the query maps to.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Query<Field, Root>
 where
     Field: Queryable<Root>,
@@ -54,6 +54,16 @@ where
     /// Inner query type used for further descending into the structure
     subquery: <Field as Queryable<Root>>::QueryType,
     _data: PhantomData<(Field, Root)>,
+}
+
+impl<Field: Debug, Root: Debug> Debug for Query<Field, Root>
+where
+    Field: Queryable<Root>,
+    Root: Table,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Query").field("path", &self.path).finish()
+    }
 }
 
 impl<Field> Default for Query<Field, Field>
@@ -93,7 +103,7 @@ where
         value: Value,
     ) -> Comparison<Field, Root>
     where
-        <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql + Debug,
+        <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql,
     {
         Comparison {
             query: self.clone(),

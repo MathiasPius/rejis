@@ -15,7 +15,7 @@ fn impl_query_type(vis: &Visibility, ident: &Ident, fields: &Fields) -> TokenStr
     });
 
     quote! {
-        #[derive(Debug, Clone)]
+        #[derive(Clone)]
         #vis struct #query_ident<Root: Table> {
             #(#fields)*
         }

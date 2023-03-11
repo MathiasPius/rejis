@@ -46,23 +46,37 @@ impl Display for Operator {
 
 /// Describes comparison between the `Query` path of a `Root` object, given
 /// a comparable value and operator.
-#[derive(Debug)]
 pub struct Comparison<Field, Root>
 where
     Field: Queryable<Root>,
     Root: Table,
-    <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql + Debug,
+    <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql,
 {
     pub(crate) query: Query<Field, Root>,
     pub(crate) operator: Operator,
     pub(crate) value: <Field::QueryType as QueryConstructor<Root>>::Inner,
 }
 
-impl<Field, Root> Filter<Root> for Comparison<Field, Root>
+impl<Field: Debug, Root: Debug> Debug for Comparison<Field, Root>
 where
     Field: Queryable<Root>,
     Root: Table,
     <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql + Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Comparison")
+            .field("query", &self.query)
+            .field("operator", &self.operator)
+            .field("value", &self.value as &dyn Debug)
+            .finish()
+    }
+}
+
+impl<Field, Root> Filter<Root> for Comparison<Field, Root>
+where
+    Field: Queryable<Root>,
+    Root: Table,
+    <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql,
 {
     fn bind_parameters(
         &self,
@@ -89,8 +103,16 @@ where
     }
 }
 
-#[derive(Debug)]
 pub struct And<F>(pub F);
+
+impl<F: Debug> Debug for And<F>
+where
+    F: Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("And").field(&self.0).finish()
+    }
+}
 
 impl<Root: Table, A, B> Filter<Root> for And<(A, B)>
 where
@@ -123,8 +145,16 @@ where
     }
 }
 
-#[derive(Debug)]
 pub struct Or<F>(pub F);
+
+impl<F: Debug> Debug for Or<F>
+where
+    F: Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Or").field(&self.0).finish()
+    }
+}
 
 impl<Root: Table, A, B> Filter<Root> for Or<(A, B)>
 where
