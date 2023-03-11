@@ -1,8 +1,7 @@
-use std::fmt::{Debug, Display, Formatter, Write};
-
-use rusqlite::{Statement, ToSql};
-
+//! Structures used for applying filters to queries.
 use crate::query::{Query, QueryConstructor, Queryable, Table};
+use rusqlite::{Statement, ToSql};
+use std::fmt::{Debug, Display, Formatter, Write};
 
 /// Structure capable of producing a valid sql where-clause,
 /// and binding parameters to it.

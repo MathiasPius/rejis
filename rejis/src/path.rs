@@ -1,3 +1,4 @@
+//! JSON Path object construction.
 use std::fmt::Display;
 
 #[derive(Debug, Clone)]

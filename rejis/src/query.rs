@@ -21,6 +21,13 @@ pub trait Table: Queryable<Self> + Debug + Sized + 'static {
 
 /// Indicates the `FieldQuery` struct which describes the json structure
 /// of the object.
+///
+/// You will want to implement this trait for any object which you want to
+/// traverse using queries and filters. the `QueryType` object acts as a kind
+/// of *reflection* of the real object, where each member is a `Query` object
+/// describing said member.
+///
+/// Can (and should) be automatically derived when possible.
 pub trait Queryable<Root>: Clone + Debug + 'static
 where
     Root: Table,
@@ -70,6 +77,7 @@ where
     Field: Queryable<Root>,
     Root: Table,
 {
+    /// Construct a new `Query` with the given path.
     pub fn new(path: Path) -> Self {
         Query {
             subquery: Field::QueryType::new::<Field>(&path),
@@ -78,6 +86,7 @@ where
         }
     }
 
+    /// Compare value at query's path using the given `operator` and `value`.
     pub fn cmp<Value: Into<<Field::QueryType as QueryConstructor<Root>>::Inner>>(
         &self,
         operator: Operator,
@@ -150,13 +159,17 @@ where
     }
 }
 
-/// Trait implemented by the a Queryable type's QueryType
-/// exposing a constructor used when building sub-queries.
+/// Exposes a constructor for `QueryType`s when building sub-queries.
+///
+/// Implemented by the a `Queryable` type's `QueryType`
 pub trait QueryConstructor<Root>
 where
     Root: Table,
 {
     type Inner;
+
+    /// Given the parent path `path` and a `Queryable` type `Field`, construct
+    /// an instance of the `Field`'s `Queryable` type.
     fn new<Field>(path: &Path) -> Self
     where
         Field: Queryable<Root>;
