@@ -1,3 +1,4 @@
+//! Derive macros for the [`Queryable`] and [`Table`] traits of the `rejis` crate.
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Data, DeriveInput, Fields, Visibility};
@@ -38,7 +39,7 @@ fn impl_field_query(ident: &Ident, fields: &Fields) -> TokenStream {
     });
 
     quote! {
-        impl<Root: Table> ::rejis::QueryConstructor<Root> for #query_ident<Root> {
+        impl<Root: ::rejis::Table> ::rejis::QueryConstructor<Root> for #query_ident<Root> {
             type Inner = #ident;
             fn new<Field: ::rejis::Queryable<Root>>(path: &::rejis::path::Path) -> Self {
                 #query_ident {
@@ -55,7 +56,7 @@ pub fn derive_queryable(stream: proc_macro::TokenStream) -> proc_macro::TokenStr
     let derive: DeriveInput = syn::parse2(stream).unwrap();
 
     let Data::Struct(data) = derive.data else {
-        panic!("Queryable can only be derived from structs currently.");
+        panic!("Queryable can only be derived for structs currently.");
     };
 
     let query_type = impl_query_type(&derive.vis, &derive.ident, &data.fields);
