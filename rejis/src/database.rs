@@ -4,8 +4,30 @@ use std::fmt::Write;
 
 use crate::{
     filter::Filter,
+    map::{Map, Select},
     query::{Queryable, Table},
 };
+
+fn sql_query_builder<Root: Table>(
+    table_name: &str,
+    filter: &impl Filter<Root>,
+    selector: &str,
+) -> Result<String, std::fmt::Error> {
+    let mut sql = format!(
+        "
+with
+    root as (
+        select rowid, value
+        from {table_name}
+    )",
+    );
+
+    filter.statement("result", &mut sql)?;
+
+    write!(&mut sql, "\n{selector}")?;
+
+    Ok(sql)
+}
 
 /// Wrapper around a [`Connection`] which enables interaction
 /// with the underlying database using the `rejis` system.
@@ -44,71 +66,52 @@ impl Database {
     }
 
     /// Fetch `Root` object(s) using the given filter
-    pub fn get<Root>(
+    pub fn get<Root, Field, F>(
         &self,
-        filter: &(impl Filter<Root> + std::fmt::Debug),
-    ) -> Result<Vec<Root>, rusqlite::Error>
+        filter: impl Into<Select<Field, Root, F>>,
+    ) -> Result<Vec<Field>, rusqlite::Error>
     where
         Root: Table + DeserializeOwned,
+        Field: Queryable<Root>,
+        F: Filter<Root>,
+        Select<Field, Root, F>: Map<Field, Root>,
     {
-        let mut sql = format!(
-            "
-with
-    root as (
-        select rowid, value
-        from {table}
-    )",
-            table = Root::TABLE_NAME
-        );
-        filter.statement("result", &mut sql).unwrap();
-        write!(&mut sql, "\nselect result.value from result").unwrap();
+        let select: Select<Field, Root, F> = filter.into();
+
+        let sql = sql_query_builder(Root::TABLE_NAME, &select, &select.selector()).unwrap();
 
         let mut stmt = self.0.prepare(&sql)?;
-        filter.bind_parameters(&mut stmt, &mut 1)?;
+        select.bind_parameters(&mut stmt, &mut 1)?;
 
         let mut objects = Vec::new();
         let mut rows = stmt.raw_query();
         while let Some(result) = rows.next()? {
-            let value: String = result.get(0)?;
-            let result: Root = serde_json::from_str(&value).unwrap();
-
-            objects.push(result);
+            objects.push(select.extract(&result).unwrap());
         }
 
         Ok(objects)
     }
 
     /// Delete `Root` object(s) using the given filter
-    pub fn delete<Root>(
-        &self,
-        filter: &(impl Filter<Root> + std::fmt::Debug),
-    ) -> Result<Vec<Root>, rusqlite::Error>
+    pub fn delete<Root>(&self, filter: &impl Filter<Root>) -> Result<Vec<Root>, rusqlite::Error>
     where
         Root: Table + DeserializeOwned,
     {
         let table = Root::TABLE_NAME;
 
-        let mut sql = format!(
-            "
-with
-    root as (
-        select rowid, value
-        from {table}
-    )"
-        );
-        filter.statement("result", &mut sql).unwrap();
-        write!(
-            &mut sql,
-            "
+        let sql = sql_query_builder(
+            table,
+            filter,
+            &format!(
+                "
 delete from {table}
 where exists (
     select * from result
     where result.rowid = {table}.rowid
 )"
+            ),
         )
         .unwrap();
-
-        println!("{sql}");
 
         let mut stmt = self.0.prepare(&sql)?;
         filter.bind_parameters(&mut stmt, &mut 1)?;

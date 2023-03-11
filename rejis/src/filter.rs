@@ -1,5 +1,8 @@
 //! Structures used for applying filters to queries.
-use crate::query::{Query, QueryConstructor, Queryable, Table};
+use crate::{
+    map::Select,
+    query::{Query, QueryConstructor, Queryable, Table},
+};
 use rusqlite::{Statement, ToSql};
 use std::fmt::{Debug, Display, Formatter, Write};
 
@@ -16,6 +19,16 @@ pub trait Filter<Root: Table> {
     ) -> Result<(), rusqlite::Error>;
 
     fn statement(&self, name: &str, f: &mut impl Write) -> std::fmt::Result;
+
+    fn map<Field: Queryable<Root>>(self, query: &Query<Field, Root>) -> Select<Field, Root, Self>
+    where
+        Self: Sized,
+    {
+        Select {
+            filter: self,
+            selector: query.clone(),
+        }
+    }
 }
 
 /// [`Comparison`] operator.
@@ -55,6 +68,21 @@ where
     pub(crate) query: Query<Field, Root>,
     pub(crate) operator: Operator,
     pub(crate) value: <Field::QueryType as QueryConstructor<Root>>::Inner,
+}
+
+impl<Field: Clone, Root: Clone> Clone for Comparison<Field, Root>
+where
+    Field: Queryable<Root>,
+    Root: Table,
+    <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql + Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            query: self.query.clone(),
+            operator: self.operator.clone(),
+            value: self.value.clone(),
+        }
+    }
 }
 
 impl<Field: Debug, Root: Debug> Debug for Comparison<Field, Root>
@@ -103,6 +131,7 @@ where
     }
 }
 
+#[derive(Clone)]
 pub struct And<F>(pub F);
 
 impl<F: Debug> Debug for And<F>
@@ -145,6 +174,7 @@ where
     }
 }
 
+#[derive(Clone)]
 pub struct Or<F>(pub F);
 
 impl<F: Debug> Debug for Or<F>
@@ -199,6 +229,23 @@ where
     pub(crate) inner_query: Query<InnerField, Root>,
     pub(crate) operator: Operator,
     pub(crate) value: <InnerField::QueryType as QueryConstructor<Root>>::Inner,
+}
+
+impl<Field: Clone, InnerField: Clone, Root: Clone> Clone for Any<Field, InnerField, Root>
+where
+    Field: Queryable<Root>,
+    InnerField: Queryable<Root>,
+    Root: Table,
+    <InnerField::QueryType as QueryConstructor<Root>>::Inner: ToSql + Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            outer_query: self.outer_query.clone(),
+            inner_query: self.inner_query.clone(),
+            operator: self.operator.clone(),
+            value: self.value.clone(),
+        }
+    }
 }
 
 impl<Field: Debug, InnerField: Debug, Root: Debug> Debug for Any<Field, InnerField, Root>

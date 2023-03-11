@@ -91,7 +91,7 @@ built on top of it, to reduce database roundtrips.
   ```
 
 ## Tentative features
-* **Query mapping**
+* **Query mapping** Almost implemented!
 
   Right now the Query is only used for filtering, but the same structure
   could be useful for optionally narrowing the selection retrieved from the database.

@@ -1,5 +1,6 @@
 mod database;
 pub mod filter;
+mod map;
 pub mod path;
 
 pub use database::Database;
