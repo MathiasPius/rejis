@@ -9,7 +9,7 @@ use std::{fmt::Debug, marker::PhantomData, ops::Deref};
 
 /// Describes how to store the type for which it is implemented
 /// in an sqlite table.
-pub trait Table: Queryable<Self> + Debug + Sized + 'static {
+pub trait Table: Queryable<Self> + Sized + 'static {
     /// Name used for the table in the database when reading or writing
     /// this object to it.
     const TABLE_NAME: &'static str;
@@ -120,7 +120,7 @@ where
 
 impl<Field, Root> Query<Vec<Field>, Root>
 where
-    Field: Queryable<Root> + Debug,
+    Field: Queryable<Root>,
     Vec<Field>: Queryable<Root>,
     Root: Table,
 {
@@ -135,7 +135,7 @@ where
         value: Value,
     ) -> Any<Vec<Field>, InnerField, Root>
     where
-        <InnerField::QueryType as QueryConstructor<Root>>::Inner: ToSql + Debug,
+        <InnerField::QueryType as QueryConstructor<Root>>::Inner: ToSql,
     {
         let indexed = VecField::<Field, Root>::new::<Field>(&Path::default()).wildcard();
 
@@ -188,7 +188,7 @@ where
 macro_rules! unit_field_impl {
     ($inner:ident, $field_type: ident) => {
         #[doc = concat!("Implementation of [`Queryable`] for `", stringify!($inner), "`")]
-        #[derive(Debug, Clone)]
+        #[derive(Clone)]
         pub struct $field_type;
 
         impl<Root> Queryable<Root> for $inner
@@ -230,20 +230,20 @@ unit_field_impl!(bool, BoolQuery);
 #[derive(Debug, Clone)]
 pub struct VecField<Field, Root>(Query<Field, Root>)
 where
-    Field: Queryable<Root> + Debug,
+    Field: Queryable<Root>,
     Root: Table;
 
 impl<Field, Root> Queryable<Root> for Vec<Field>
 where
-    Field: Queryable<Root> + Debug + Clone,
-    Root: Table + Debug + Clone,
+    Field: Queryable<Root> + Clone,
+    Root: Table + Clone,
 {
     type QueryType = VecField<Field, Root>;
 }
 
 impl<T, Root> QueryConstructor<Root> for VecField<T, Root>
 where
-    T: Queryable<Root> + Debug,
+    T: Queryable<Root>,
     Root: Table,
 {
     type Inner = T;
@@ -257,7 +257,7 @@ where
     }
 }
 
-impl<T: Queryable<Root> + Debug, Root: Table> VecField<T, Root> {
+impl<T: Queryable<Root>, Root: Table> VecField<T, Root> {
     pub fn at(&self, index: usize) -> Query<T, Root> {
         let path = self.0.path.join(index);
         Query {

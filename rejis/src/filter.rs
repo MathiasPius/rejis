@@ -188,13 +188,12 @@ where
 
 /// Describes comparison between the `Query` path of a `Root` object, given
 /// a comparable value and operator.
-#[derive(Debug)]
 pub struct Any<Field, InnerField, Root>
 where
     Field: Queryable<Root>,
     InnerField: Queryable<Root>,
     Root: Table,
-    <InnerField::QueryType as QueryConstructor<Root>>::Inner: ToSql + Debug,
+    <InnerField::QueryType as QueryConstructor<Root>>::Inner: ToSql,
 {
     pub(crate) outer_query: Query<Field, Root>,
     pub(crate) inner_query: Query<InnerField, Root>,
@@ -202,12 +201,29 @@ where
     pub(crate) value: <InnerField::QueryType as QueryConstructor<Root>>::Inner,
 }
 
-impl<Field, InnerField, Root> Filter<Root> for Any<Field, InnerField, Root>
+impl<Field: Debug, InnerField: Debug, Root: Debug> Debug for Any<Field, InnerField, Root>
 where
     Field: Queryable<Root>,
     InnerField: Queryable<Root>,
     Root: Table,
     <InnerField::QueryType as QueryConstructor<Root>>::Inner: ToSql + Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Any")
+            .field("outer_query", &self.outer_query)
+            .field("inner_query", &self.inner_query)
+            .field("operator", &self.operator)
+            .field("value", &self.value as &dyn Debug)
+            .finish()
+    }
+}
+
+impl<Field, InnerField, Root> Filter<Root> for Any<Field, InnerField, Root>
+where
+    Field: Queryable<Root>,
+    InnerField: Queryable<Root>,
+    Root: Table,
+    <InnerField::QueryType as QueryConstructor<Root>>::Inner: ToSql,
 {
     fn bind_parameters(
         &self,
