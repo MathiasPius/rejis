@@ -63,6 +63,51 @@ with
         filter.statement("result", &mut sql).unwrap();
         write!(&mut sql, "\nselect result.value from result").unwrap();
 
+        let mut stmt = self.0.prepare(&sql)?;
+        filter.bind_parameters(&mut stmt, &mut 1)?;
+
+        let mut objects = Vec::new();
+        let mut rows = stmt.raw_query();
+        while let Some(result) = rows.next()? {
+            let value: String = result.get(0)?;
+            let result: Root = serde_json::from_str(&value).unwrap();
+
+            objects.push(result);
+        }
+
+        Ok(objects)
+    }
+
+    /// Delete `Root` object(s) using the given filter
+    pub fn delete<Root>(
+        &self,
+        filter: &(impl Filter<Root> + std::fmt::Debug),
+    ) -> Result<Vec<Root>, rusqlite::Error>
+    where
+        Root: Table + DeserializeOwned,
+    {
+        let table = Root::TABLE_NAME;
+
+        let mut sql = format!(
+            "
+with
+    root as (
+        select rowid, value
+        from {table}
+    )"
+        );
+        filter.statement("result", &mut sql).unwrap();
+        write!(
+            &mut sql,
+            "
+delete from {table}
+where exists (
+    select * from result
+    where result.rowid = {table}.rowid
+)"
+        )
+        .unwrap();
+
         println!("{sql}");
 
         let mut stmt = self.0.prepare(&sql)?;

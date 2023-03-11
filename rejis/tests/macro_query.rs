@@ -245,4 +245,21 @@ mod macros {
         assert_eq!(jane.len(), 1);
         println!("{:#?}", jane[0]);
     }
+
+    #[test]
+    fn filter_deletion() {
+        let db = user_database();
+
+        let smiths_with_jimmies = Q! {
+            (User.pets[..].name == "Jimmy") && (User.last_name == "Smith")
+        };
+
+        let jane = db.get(&smiths_with_jimmies).unwrap();
+        assert_eq!(jane.len(), 1);
+
+        db.delete(&smiths_with_jimmies).unwrap();
+
+        let jane = db.get(&smiths_with_jimmies).unwrap();
+        assert_eq!(jane.len(), 0);
+    }
 }
