@@ -52,7 +52,7 @@ fn insert_and_query() {
     });
 
     let john_smith = db
-        .get(And((
+        .get(&And((
             User::query().first_name.cmp(Equal, "John"),
             User::query().last_name.cmp(Equal, "Smith"),
         )))

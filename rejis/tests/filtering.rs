@@ -97,7 +97,9 @@ mod filtering {
     fn single_property_equality() {
         let db = testutils::user_database();
 
-        let johns = db.get(User::query().first_name.cmp(Equal, "John")).unwrap();
+        let johns = db
+            .get(&User::query().first_name.cmp(Equal, "John"))
+            .unwrap();
 
         assert_eq!(johns.len(), 2);
         assert!(johns.iter().all(|john| john.first_name == "John"));
@@ -108,7 +110,7 @@ mod filtering {
         let db = testutils::user_database();
 
         let non_smiths = db
-            .get(User::query().last_name.cmp(NotEqual, "Smith"))
+            .get(&User::query().last_name.cmp(NotEqual, "Smith"))
             .unwrap();
 
         assert_eq!(non_smiths.len(), 3);
@@ -123,7 +125,7 @@ mod filtering {
 
         // Find all John Smiths
         let john_smith = db
-            .get(And((
+            .get(&And((
                 User::query().first_name.cmp(Equal, "John"),
                 User::query().last_name.cmp(Equal, "Smith"),
             )))
@@ -141,7 +143,7 @@ mod filtering {
 
         // Find all non-Smith Johns
         let john_smith = db
-            .get(And((
+            .get(&And((
                 User::query().first_name.cmp(Equal, "John"),
                 User::query().last_name.cmp(NotEqual, "Smith"),
             )))
@@ -159,7 +161,7 @@ mod filtering {
     fn like_matching() {
         let db = testutils::user_database();
 
-        let jays = db.get(User::query().first_name.cmp(Like, "J%")).unwrap();
+        let jays = db.get(&User::query().first_name.cmp(Like, "J%")).unwrap();
 
         // Should yield John Smith, Jane Smith and John Anderson
         assert_eq!(jays.len(), 3);
@@ -171,7 +173,7 @@ mod filtering {
 
         let garfield_owners = db
             .get(
-                User::query()
+                &User::query()
                     .pets
                     .any(|query| query.name.clone(), Like, "Jimmy"),
             )

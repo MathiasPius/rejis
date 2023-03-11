@@ -46,7 +46,7 @@ impl Database {
     /// Fetch `Root` object(s) using the given filter
     pub fn get<Root>(
         &self,
-        filter: impl Filter<Root> + std::fmt::Debug,
+        filter: &(impl Filter<Root> + std::fmt::Debug),
     ) -> Result<Vec<Root>, rusqlite::Error>
     where
         Root: Table + DeserializeOwned,

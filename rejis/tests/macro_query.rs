@@ -96,7 +96,7 @@ mod macros {
         let db = user_database();
 
         let johns = db
-            .get(Q! {
+            .get(&Q! {
                 User.first_name == "John"
             })
             .unwrap();
@@ -110,7 +110,7 @@ mod macros {
         let db = user_database();
 
         let johns = db
-            .get(Q! {
+            .get(&Q! {
                 (User.first_name == "John") && (User.last_name != "Smith")
             })
             .unwrap();
@@ -133,7 +133,7 @@ mod macros {
             )
         };
 
-        let johns = db.get(query).unwrap();
+        let johns = db.get(&query).unwrap();
 
         println!("{:#?}", johns);
         assert_eq!(johns.len(), 2);
@@ -149,7 +149,7 @@ mod macros {
             User.first_name == &first_name[0]
         };
 
-        let johns = db.get(query).unwrap();
+        let johns = db.get(&query).unwrap();
 
         println!("{:#?}", johns);
         assert_eq!(johns.len(), 2);
@@ -165,7 +165,7 @@ mod macros {
             User.first_name == first_name
         };
 
-        let johns = db.get(query).unwrap();
+        let johns = db.get(&query).unwrap();
 
         println!("{:#?}", johns);
         assert_eq!(johns.len(), 2);
@@ -179,7 +179,7 @@ mod macros {
             User.pets[..].name == "Garfield"
         };
 
-        let garfield_owners = db.get(garfields).unwrap();
+        let garfield_owners = db.get(&garfields).unwrap();
 
         println!("{:#?}", garfield_owners);
         assert_eq!(garfield_owners.len(), 1);
@@ -195,7 +195,7 @@ mod macros {
             User.pets[..].name == name
         };
 
-        let garfield_owners = db.get(garfields).unwrap();
+        let garfield_owners = db.get(&garfields).unwrap();
 
         println!("{:#?}", garfield_owners);
         assert_eq!(garfield_owners.len(), 1);
@@ -211,7 +211,7 @@ mod macros {
             User.pets[..].name == &name[0]
         };
 
-        let garfield_owners = db.get(garfields).unwrap();
+        let garfield_owners = db.get(&garfields).unwrap();
 
         println!("{:#?}", garfield_owners);
         assert_eq!(garfield_owners.len(), 1);
@@ -225,7 +225,7 @@ mod macros {
             User.pets[..].name == "Jimmy"
         };
 
-        let jimmy_owners = db.get(jimmies).unwrap();
+        let jimmy_owners = db.get(&jimmies).unwrap();
 
         println!("{:#?}", jimmy_owners);
         assert_eq!(jimmy_owners.len(), 2);
@@ -239,7 +239,7 @@ mod macros {
             (User.pets[..].name == "Jimmy") && (User.last_name == "Smith")
         };
 
-        let jane = db.get(jane).unwrap();
+        let jane = db.get(&jane).unwrap();
 
         println!("{:#?}", jane);
         assert_eq!(jane.len(), 1);
