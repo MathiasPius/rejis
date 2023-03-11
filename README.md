@@ -1,4 +1,9 @@
-# rejis
+# rejis ![Test Status] [![CodeCov]][codecov.io]
+
+[CodeCov]: https://codecov.io/gh/MathiasPius/rejis/branch/main/graph/badge.svg?token=S4938IJOET
+[codecov.io]: https://codecov.io/gh/MathiasPius/rejis
+[Test Status]: https://github.com/MathiasPius/rejis/workflows/test/badge.svg
+
 Adventures in type-safe querying of json-serializable structures in SQLite.
 
 This crate aims to explore development of an API built on top of `rusqlite` which allows
