@@ -52,3 +52,15 @@ impl Display for Path {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Path;
+
+    #[test]
+    fn build_path() {
+        let path = Path::default().join("pets").join(0).join("name");
+
+        assert_eq!(path.to_string(), "$.pets[0].name");
+    }
+}
