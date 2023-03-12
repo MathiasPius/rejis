@@ -2,12 +2,12 @@
 mod macros {
     use rejis::Q;
 
-    use rejis::Table;
+    use rejis::{Executor, Table};
     use testutils::user_database;
     use testutils::User;
 
     mod testutils {
-        use rejis::{Database, Queryable, Table};
+        use rejis::{Queryable, Table};
         use rusqlite::Connection;
         use serde::{Deserialize, Serialize};
 
@@ -25,14 +25,15 @@ mod macros {
         }
 
         /// Utility function providing a database pre-seeded with a number of different users
-        pub fn user_database() -> Database {
+        pub fn user_database() -> Connection {
             // Open an in-memory database, create the table and populate it with
             // three users.
-            let db = Database::new(Connection::open_in_memory().unwrap());
-            db.create_table::<User>().unwrap();
+            let db = Connection::open_in_memory().unwrap();
+
+            User::init(&db).unwrap();
 
             // John Smith
-            db.insert(User {
+            User {
                 first_name: String::from("John"),
                 last_name: String::from("Smith"),
                 age: 32,
@@ -44,10 +45,12 @@ mod macros {
                         name: String::from("Lucky"),
                     },
                 ],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             // Jane Smith
-            db.insert(User {
+            User {
                 first_name: String::from("Jane"),
                 last_name: String::from("Smith"),
                 age: 35,
@@ -59,33 +62,41 @@ mod macros {
                         name: String::from("Jimmy"),
                     },
                 ],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             // Thomas Anderson
-            db.insert(User {
+            User {
                 first_name: String::from("Thomas"),
                 last_name: String::from("Anderson"),
                 age: 24,
                 pets: vec![],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             // John Anderson
-            db.insert(User {
+            User {
                 first_name: String::from("John"),
                 last_name: String::from("Anderson"),
                 age: 48,
                 pets: vec![Pet {
                     name: String::from("Jimmy"),
                 }],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             // Richard LaFleur
-            db.insert(User {
+            User {
                 first_name: String::from("Richard"),
                 last_name: String::from("LaFleur"),
                 age: 36,
                 pets: vec![],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             db
         }
@@ -95,11 +106,11 @@ mod macros {
     fn simple_filtering_dsl() {
         let db = user_database();
 
-        let johns = db
-            .get(Q! {
-                User.first_name == "John"
-            })
-            .unwrap();
+        let johns = Q! {
+            User.first_name == "John"
+        }
+        .get(&db)
+        .unwrap();
 
         println!("{:#?}", johns);
         assert_eq!(johns.len(), 2);
@@ -109,11 +120,11 @@ mod macros {
     fn multi_filtering_dsl() {
         let db = user_database();
 
-        let johns = db
-            .get(Q! {
-                (User.first_name == "John") && (User.last_name != "Smith")
-            })
-            .unwrap();
+        let johns = Q! {
+            (User.first_name == "John") && (User.last_name != "Smith")
+        }
+        .get(&db)
+        .unwrap();
 
         println!("{:#?}", johns);
         assert_eq!(johns.len(), 1);
@@ -124,16 +135,16 @@ mod macros {
     fn multi_filtering_or_dsl() {
         let db = user_database();
 
-        let query = Q! {
+        let johns = Q! {
             (
                 (User.first_name == "John") && (User.last_name == "Smith")
             ) ||
             (
                 (User.first_name == "Thomas") && (User.last_name == "Anderson")
             )
-        };
-
-        let johns = db.get(query).unwrap();
+        }
+        .get(&db)
+        .unwrap();
 
         println!("{:#?}", johns);
         assert_eq!(johns.len(), 2);
@@ -145,11 +156,11 @@ mod macros {
 
         let first_name = vec!["John"];
 
-        let query = Q! {
+        let johns = Q! {
             User.first_name == &first_name[0]
-        };
-
-        let johns = db.get(query).unwrap();
+        }
+        .get(&db)
+        .unwrap();
 
         println!("{:#?}", johns);
         assert_eq!(johns.len(), 2);
@@ -161,11 +172,11 @@ mod macros {
 
         let first_name = "John";
 
-        let query = Q! {
+        let johns = Q! {
             User.first_name == first_name
-        };
-
-        let johns = db.get(query).unwrap();
+        }
+        .get(&db)
+        .unwrap();
 
         println!("{:#?}", johns);
         assert_eq!(johns.len(), 2);
@@ -175,11 +186,11 @@ mod macros {
     fn any_query_literal() {
         let db = user_database();
 
-        let garfields = Q! {
+        let garfield_owners = Q! {
             User.pets[..].name == "Garfield"
-        };
-
-        let garfield_owners = db.get(garfields).unwrap();
+        }
+        .get(&db)
+        .unwrap();
 
         println!("{:#?}", garfield_owners);
         assert_eq!(garfield_owners.len(), 1);
@@ -191,11 +202,11 @@ mod macros {
 
         let name = "Garfield";
 
-        let garfields = Q! {
+        let garfield_owners = Q! {
             User.pets[..].name == name
-        };
-
-        let garfield_owners = db.get(garfields).unwrap();
+        }
+        .get(&db)
+        .unwrap();
 
         println!("{:#?}", garfield_owners);
         assert_eq!(garfield_owners.len(), 1);
@@ -207,11 +218,11 @@ mod macros {
 
         let name = vec!["Garfield"];
 
-        let garfields = Q! {
+        let garfield_owners = Q! {
             User.pets[..].name == &name[0]
-        };
-
-        let garfield_owners = db.get(garfields).unwrap();
+        }
+        .get(&db)
+        .unwrap();
 
         println!("{:#?}", garfield_owners);
         assert_eq!(garfield_owners.len(), 1);
@@ -221,11 +232,11 @@ mod macros {
     fn any_query_multiples() {
         let db = user_database();
 
-        let jimmies = Q! {
+        let jimmy_owners = Q! {
             User.pets[..].name == "Jimmy"
-        };
-
-        let jimmy_owners = db.get(jimmies).unwrap();
+        }
+        .get(&db)
+        .unwrap();
 
         println!("{:#?}", jimmy_owners);
         assert_eq!(jimmy_owners.len(), 2);
@@ -237,9 +248,9 @@ mod macros {
 
         let jane = Q! {
             (User.pets[..].name == "Jimmy") && (User.last_name == "Smith")
-        };
-
-        let jane = db.get(jane).unwrap();
+        }
+        .get(&db)
+        .unwrap();
 
         println!("{:#?}", jane);
         assert_eq!(jane.len(), 1);
@@ -254,12 +265,12 @@ mod macros {
             (User.pets[..].name == "Jimmy") && (User.last_name == "Smith")
         };
 
-        let jane = db.get(&smiths_with_jimmies).unwrap();
+        let jane = smiths_with_jimmies.get(&db).unwrap();
         assert_eq!(jane.len(), 1);
 
-        db.delete(&smiths_with_jimmies).unwrap();
+        smiths_with_jimmies.delete(&db).unwrap();
 
-        let jane = db.get(smiths_with_jimmies).unwrap();
+        let jane = smiths_with_jimmies.get(&db).unwrap();
         assert_eq!(jane.len(), 0);
     }
 }

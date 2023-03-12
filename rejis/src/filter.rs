@@ -1,7 +1,7 @@
 //! Structures used for applying filters to queries.
 use crate::{
-    query::{Query, QueryConstructor, Queryable, Table},
     transform::{FromRow, Transform},
+    Query, QueryConstructor, Queryable, Table,
 };
 use rusqlite::{Statement, ToSql};
 use std::fmt::{Debug, Display, Formatter};
@@ -180,14 +180,15 @@ where
 
 impl<Root, Field, A, B> Transform for Or<A, B>
 where
-    Root: Table + FromRow,
+    Root: Table,
+    (Root,): FromRow,
     Field: Queryable<Root>,
     A: Transform<Root = Root, Field = Field>,
     B: Transform<Root = Root, Field = Field>,
 {
     type Root = Root;
     type Field = Field;
-    type Output = Root;
+    type Output = (Root,);
 
     fn bind(
         &self,
@@ -267,12 +268,13 @@ impl<Field, InnerField, Root> Transform for Any<Field, InnerField, Root>
 where
     Field: Queryable<Root>,
     InnerField: Queryable<Root>,
-    Root: Table + FromRow,
+    Root: Table,
+    (Root,): FromRow,
     <InnerField::QueryType as QueryConstructor<Root>>::Inner: ToSql,
 {
     type Root = Root;
     type Field = InnerField;
-    type Output = Root;
+    type Output = (Root,);
 
     fn bind(
         &self,

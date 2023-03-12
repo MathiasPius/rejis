@@ -4,20 +4,9 @@ use rusqlite::ToSql;
 use crate::{
     filter::{Any, Comparison, Operator},
     path::Path,
+    Table,
 };
 use std::{fmt::Debug, marker::PhantomData, ops::Deref};
-
-/// Describes how to store the type for which it is implemented
-/// in an sqlite table.
-pub trait Table: Queryable<Self> + Sized + 'static {
-    /// Name used for the table in the database when reading or writing
-    /// this object to it.
-    const TABLE_NAME: &'static str;
-
-    fn query() -> Query<Self, Self> {
-        Query::<Self, Self>::default()
-    }
-}
 
 /// Indicates the `FieldQuery` struct which describes the json structure
 /// of the object.

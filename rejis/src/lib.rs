@@ -1,10 +1,13 @@
-mod database;
+mod executor;
 pub mod filter;
 mod map;
 pub mod path;
 pub mod transform;
 
-pub use database::Database;
+mod table;
+pub use table::Table;
+
+pub use executor::Executor;
 
 #[cfg(feature = "derive")]
 pub use rejis_derive::{Queryable, Table};

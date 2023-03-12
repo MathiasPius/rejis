@@ -1,11 +1,11 @@
 #[cfg(feature = "derive")]
 mod mapping {
-    use rejis::{filter::Operator::Equal, transform::Transform, Table};
+    use rejis::{filter::Operator::Equal, transform::Transform, Executor, Table};
 
     use testutils::User;
 
     mod testutils {
-        use rejis::{Database, Queryable, Table};
+        use rejis::{Queryable, Table};
         use rusqlite::Connection;
         use serde::{Deserialize, Serialize};
 
@@ -23,14 +23,15 @@ mod mapping {
         }
 
         /// Utility function providing a database pre-seeded with a number of different users
-        pub fn user_database() -> Database {
+        pub fn user_database() -> Connection {
             // Open an in-memory database, create the table and populate it with
             // three users.
-            let db = Database::new(Connection::open_in_memory().unwrap());
-            db.create_table::<User>().unwrap();
+            let db = Connection::open_in_memory().unwrap();
+
+            User::init(&db).unwrap();
 
             // John Smith
-            db.insert(User {
+            User {
                 first_name: String::from("John"),
                 last_name: String::from("Smith"),
                 age: 32,
@@ -42,10 +43,12 @@ mod mapping {
                         name: String::from("Lucky"),
                     },
                 ],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             // Jane Smith
-            db.insert(User {
+            User {
                 first_name: String::from("Jane"),
                 last_name: String::from("Smith"),
                 age: 35,
@@ -57,33 +60,41 @@ mod mapping {
                         name: String::from("Jimmy"),
                     },
                 ],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             // Thomas Anderson
-            db.insert(User {
+            User {
                 first_name: String::from("Thomas"),
                 last_name: String::from("Anderson"),
                 age: 24,
                 pets: vec![],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             // John Anderson
-            db.insert(User {
+            User {
                 first_name: String::from("John"),
                 last_name: String::from("Anderson"),
                 age: 48,
                 pets: vec![Pet {
                     name: String::from("Jimmy"),
                 }],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             // Richard LaFleur
-            db.insert(User {
+            User {
                 first_name: String::from("Richard"),
                 last_name: String::from("LaFleur"),
                 age: 36,
                 pets: vec![],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             db
         }
@@ -94,13 +105,11 @@ mod mapping {
         let db = testutils::user_database();
 
         // Find ages of all Johns
-        let ages: Vec<u8> = db
-            .get::<User, _>(
-                User::query()
-                    .first_name
-                    .cmp(Equal, "John")
-                    .map(&User::query().age),
-            )
+        let ages = User::query()
+            .first_name
+            .cmp(Equal, "John")
+            .map(&User::query().age)
+            .get(&db)
             .unwrap();
 
         println!("{ages:?}");

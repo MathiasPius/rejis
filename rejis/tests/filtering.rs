@@ -3,13 +3,13 @@ mod filtering {
     use rejis::{
         filter::And,
         filter::Operator::{Equal, Like, NotEqual},
-        Table,
+        Executor, Table,
     };
 
     use testutils::User;
 
     mod testutils {
-        use rejis::{Database, Queryable, Table};
+        use rejis::{Queryable, Table};
         use rusqlite::Connection;
         use serde::{Deserialize, Serialize};
 
@@ -27,14 +27,15 @@ mod filtering {
         }
 
         /// Utility function providing a database pre-seeded with a number of different users
-        pub fn user_database() -> Database {
+        pub fn user_database() -> Connection {
             // Open an in-memory database, create the table and populate it with
             // three users.
-            let db = Database::new(Connection::open_in_memory().unwrap());
-            db.create_table::<User>().unwrap();
+            let db = Connection::open_in_memory().unwrap();
+
+            User::init(&db).unwrap();
 
             // John Smith
-            db.insert(User {
+            User {
                 first_name: String::from("John"),
                 last_name: String::from("Smith"),
                 age: 32,
@@ -46,10 +47,12 @@ mod filtering {
                         name: String::from("Lucky"),
                     },
                 ],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             // Jane Smith
-            db.insert(User {
+            User {
                 first_name: String::from("Jane"),
                 last_name: String::from("Smith"),
                 age: 35,
@@ -61,33 +64,41 @@ mod filtering {
                         name: String::from("Jimmy"),
                     },
                 ],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             // Thomas Anderson
-            db.insert(User {
+            User {
                 first_name: String::from("Thomas"),
                 last_name: String::from("Anderson"),
                 age: 24,
                 pets: vec![],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             // John Anderson
-            db.insert(User {
+            User {
                 first_name: String::from("John"),
                 last_name: String::from("Anderson"),
                 age: 48,
                 pets: vec![Pet {
                     name: String::from("Jimmy"),
                 }],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             // Richard LaFleur
-            db.insert(User {
+            User {
                 first_name: String::from("Richard"),
                 last_name: String::from("LaFleur"),
                 age: 36,
                 pets: vec![],
-            });
+            }
+            .insert(&db)
+            .unwrap();
 
             db
         }
@@ -97,7 +108,11 @@ mod filtering {
     fn single_property_equality() {
         let db = testutils::user_database();
 
-        let johns = db.get(User::query().first_name.cmp(Equal, "John")).unwrap();
+        let johns = User::query()
+            .first_name
+            .cmp(Equal, "John")
+            .get(&db)
+            .unwrap();
 
         assert_eq!(johns.len(), 2);
         assert!(johns.iter().all(|john| john.first_name == "John"));
@@ -107,8 +122,10 @@ mod filtering {
     fn single_property_inequality() {
         let db = testutils::user_database();
 
-        let non_smiths = db
-            .get(User::query().last_name.cmp(NotEqual, "Smith"))
+        let non_smiths = User::query()
+            .last_name
+            .cmp(NotEqual, "Smith")
+            .get(&db)
             .unwrap();
 
         assert_eq!(non_smiths.len(), 3);
@@ -122,12 +139,12 @@ mod filtering {
         let db = testutils::user_database();
 
         // Find all John Smiths
-        let john_smith = db
-            .get(And((
-                User::query().first_name.cmp(Equal, "John"),
-                User::query().last_name.cmp(Equal, "Smith"),
-            )))
-            .unwrap();
+        let john_smith = And(
+            User::query().first_name.cmp(Equal, "John"),
+            User::query().last_name.cmp(Equal, "Smith"),
+        )
+        .get(&db)
+        .unwrap();
 
         assert_eq!(john_smith.len(), 1);
         assert_eq!(john_smith[0].first_name, "John");
@@ -140,12 +157,12 @@ mod filtering {
         let db = testutils::user_database();
 
         // Find all non-Smith Johns
-        let john_smith = db
-            .get(And((
-                User::query().first_name.cmp(Equal, "John"),
-                User::query().last_name.cmp(NotEqual, "Smith"),
-            )))
-            .unwrap();
+        let john_smith = And(
+            User::query().first_name.cmp(Equal, "John"),
+            User::query().last_name.cmp(NotEqual, "Smith"),
+        )
+        .get(&db)
+        .unwrap();
 
         println!("{john_smith:?}");
 
@@ -159,7 +176,7 @@ mod filtering {
     fn like_matching() {
         let db = testutils::user_database();
 
-        let jays = db.get(User::query().first_name.cmp(Like, "J%")).unwrap();
+        let jays = User::query().first_name.cmp(Like, "J%").get(&db).unwrap();
 
         // Should yield John Smith, Jane Smith and John Anderson
         assert_eq!(jays.len(), 3);
@@ -169,12 +186,10 @@ mod filtering {
     fn array_matching() {
         let db = testutils::user_database();
 
-        let garfield_owners = db
-            .get(
-                User::query()
-                    .pets
-                    .any(|query| query.name.clone(), Like, "Jimmy"),
-            )
+        let garfield_owners = User::query()
+            .pets
+            .any(|query| query.name.clone(), Like, "Jimmy")
+            .get(&db)
             .unwrap();
 
         println!("{:#?}", garfield_owners);
