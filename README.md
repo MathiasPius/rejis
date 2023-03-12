@@ -82,7 +82,7 @@ can start inserting objects:
 
 **Insertion**
 ```rust
-// Add John Arbuckle with his pets to our database.
+// Add Jon Arbuckle with his pets to our database.
 conn.insert(&User {
   first_name: String::from("Jon"),
   last_name: String::from("Arbuckle"),
