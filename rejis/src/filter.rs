@@ -45,21 +45,6 @@ where
     pub(crate) value: <Field::QueryType as QueryConstructor<Root>>::Inner,
 }
 
-impl<Field: Clone, Root: Clone> Clone for Comparison<Field, Root>
-where
-    Field: Queryable<Root>,
-    Root: Table,
-    <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql + Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            query: self.query.clone(),
-            operator: self.operator,
-            value: self.value.clone(),
-        }
-    }
-}
-
 impl<Field: Debug, Root: Debug> Debug for Comparison<Field, Root>
 where
     Field: Queryable<Root>,
@@ -228,23 +213,6 @@ where
     pub(crate) inner_query: Query<InnerField, Root>,
     pub(crate) operator: Operator,
     pub(crate) value: <InnerField::QueryType as QueryConstructor<Root>>::Inner,
-}
-
-impl<Field: Clone, InnerField: Clone, Root: Clone> Clone for Any<Field, InnerField, Root>
-where
-    Field: Queryable<Root>,
-    InnerField: Queryable<Root>,
-    Root: Table,
-    <InnerField::QueryType as QueryConstructor<Root>>::Inner: ToSql + Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            outer_query: self.outer_query.clone(),
-            inner_query: self.inner_query.clone(),
-            operator: self.operator,
-            value: self.value.clone(),
-        }
-    }
 }
 
 impl<Field: Debug, InnerField: Debug, Root: Debug> Debug for Any<Field, InnerField, Root>

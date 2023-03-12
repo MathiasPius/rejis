@@ -131,3 +131,28 @@ fn filter_deletion() {
     let jane = smiths_with_jimmies.get(&db).unwrap();
     assert_eq!(jane.len(), 0);
 }
+
+#[test]
+fn query_uninitialized_table() {
+    let db = Connection::open_in_memory().unwrap();
+
+    // Attempt to fetch a user from a database which has
+    // not been initialized with a user table.
+    User::query()
+        .first_name
+        .cmp(Operator::Equal, "Jimmy")
+        .get(&db)
+        .unwrap_err();
+}
+
+#[test]
+fn debug_printing_transforms() {
+    let query = And(
+        User::query()
+            .pets
+            .any(|query| query.name.clone(), Operator::GreaterThan, "Lol"),
+        User::query().first_name.cmp(Operator::LessThan, "xyz"),
+    );
+
+    println!("{:#?}", query);
+}

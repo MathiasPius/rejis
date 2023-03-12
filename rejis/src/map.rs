@@ -13,24 +13,6 @@ where
     pub(crate) selector: Query<Field, Root>,
 }
 
-impl<Root: Table, Inner: Transform> From<Inner> for Select<Root, Root, Inner> {
-    fn from(value: Inner) -> Self {
-        Select {
-            inner: value,
-            selector: Query::default(),
-        }
-    }
-}
-
-impl<Root: Table, Filter: Transform + Clone> From<&Filter> for Select<Root, Root, Filter> {
-    fn from(value: &Filter) -> Self {
-        Select {
-            inner: value.clone(),
-            selector: Query::default(),
-        }
-    }
-}
-
 impl<Field, Root, Filter> Transform for Select<Field, Root, Filter>
 where
     Field: Queryable<Root>,
