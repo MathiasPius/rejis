@@ -273,4 +273,31 @@ mod macros {
         let jane = smiths_with_jimmies.get(&db).unwrap();
         assert_eq!(jane.len(), 0);
     }
+
+    #[test]
+    fn end_to_end_database() {
+        use rejis::Database;
+        let conn = user_database();
+
+        let bobby_finder = Q! {
+            User.first_name == "Bobby"
+        };
+
+        // Make sure Bobby hasn't been inserted yet.
+        assert_eq!(conn.get(&bobby_finder).unwrap().len(), 0);
+
+        // Insert our Bobby
+        conn.insert(&User {
+            first_name: String::from("Bobby"),
+            last_name: String::from("Tables"),
+            age: 8,
+            pets: vec![],
+        })
+        .unwrap();
+        assert_eq!(conn.get(&bobby_finder).unwrap().len(), 1);
+
+        // Delete him again, and make sure he's gone.
+        conn.delete(&bobby_finder).unwrap();
+        assert_eq!(conn.get(&bobby_finder).unwrap().len(), 0);
+    }
 }

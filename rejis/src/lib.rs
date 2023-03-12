@@ -7,7 +7,7 @@ pub mod transform;
 mod table;
 pub use table::Table;
 
-pub use executor::Executor;
+pub use executor::{Database, Executor};
 
 #[cfg(feature = "derive")]
 pub use rejis_derive::{Queryable, Table};

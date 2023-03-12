@@ -1,7 +1,7 @@
 use rusqlite::Connection;
 use serde::Serialize;
 
-use crate::{Query, Queryable};
+use crate::{transform::TransformError, Query, Queryable};
 
 /// Describes how to store the type for which it is implemented
 /// in an sqlite table.
@@ -24,13 +24,13 @@ pub trait Table: Queryable<Self> + Serialize + Sized + 'static {
         )
     }
 
-    fn insert(&self, conn: &Connection) -> Result<usize, rusqlite::Error> {
-        conn.execute(
+    fn insert(&self, conn: &Connection) -> Result<usize, TransformError> {
+        Ok(conn.execute(
             &format!(
                 "insert into {table}(value) values(json(?1))",
                 table = Self::TABLE_NAME
             ),
-            (serde_json::to_string(self).unwrap(),),
-        )
+            (serde_json::to_string(self)?,),
+        )?)
     }
 }
