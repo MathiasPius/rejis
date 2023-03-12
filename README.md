@@ -6,79 +6,162 @@
 
 Adventures in type-safe querying of json-serializable structures in SQLite.
 
-This crate aims to explore development of an API built on top of `rusqlite` which allows
-simple and sub-optimal querying and storage of `serde_json` serializable structures within
-an sqlite database.
+<!-- cargo-rdme start -->
+
+**rejis** aims to explore development of an API built on top of `rusqlite` which allows
+simple querying and storage of `serde_json` serializable structures within an sqlite database.
 
 The purpose of this is to be able to use sqlite as a persistent store of data without spending
-undue time translating between complex nested structures and sqlite tables.
+time up front translating between complex nested structures and sqlite tables.
 
-Rejis is not an ORM, as it completely disregards the *relational* benefits of a database, and
-instead abuses sqlite as a sort of low-performance on-disk `Vec`, with some sql-aware abstractions
+Rejis is *not* an ORM, as it completely disregards the *relational* benefits of a database, and
+inst//! ead abuses sqlite as a sort of low-performance on-disk `Vec`, with some sql-aware abstractions
 built on top of it, to reduce database roundtrips.
 
-# Usage
-* **Creating tables**
+The API is currently in flux and subject to change.
+ 
+## Design
+**rejis** uses `rusqlite` for interacting with a sqlite database.
 
-  You can use the `Database` structure for creating simple single-column tables for holding
-  objects of a certain type:
-  ```rust
-  #[derive(Queryable, Table, Serialize, Deserialize, Debug, Clone)]
-  struct User {
-    first_name: String,
-    last_name: String,
-    pets: Vec<String>,
-    age: u8,
-  }
+All top-level types are stored in a separate table as created by the
+[`Table`](https://docs.rs/rejis/latest/rejis/table/trait.Table.html) trait implementation for that type. 
+In most cases you will simply derive this trait automatically, and the 
+table will be a table with the same name as your type, but in lower case, 
+containing a single column named `value`.
 
-  let conn = Connection::open_in_memory()?;
-  // Creates the table to hold Users
-  User::init(&conn).unwrap();?;
-  ```
-  The type must implement all the listed traits. Other types nested within the top-level struct (User in this case),
-  must also implement all the listed traits, with the exception of `Table`.
+The `value` column contains the `serde_json` serialized contents of the
+objects you store in the database.
 
-* **Inserting structs**
-  ```rust
-  User {
-      first_name: String::from("John"),
-      last_name: String::from("Smith"),
-      age: 32,
-      pets: vec![
-        String::from("Garfield"),
-      ],
-  }.insert(&conn);
-  ```
-  Note that the struct is just inserted as a serialized value in the table specified by the `Table` implementation
-  and no effort or constraints are placed on it, meaning a table can easily have multiple identical objects, if the
-  same object is inserted multiple times.
+Querying uses composable [`Transforms`](https://docs.rs/rejis/latest/rejis/transform/trait.Transform.html) based
+on sequentially applied [CTEs](https://www.sqlite.org/lang_with.html),
+which can then be executed against a [`rusqlite::Connection`](rusqlite::Connection).
 
-* **Querying**
+Producing these queries can be done in one of three ways:
 
-  Filtering can either be done using the plain Query API:
-  ```rust
-  let john_not_smith = And(
-      User::query().first_name.cmp(Equal, "John"),
-      User::query().last_name.cmp(NotEqual, "Smith"),
-    ).get(&conn);
-  ```
-  Or using the DSL implemented by the `Q!` macro:
-  ```rust
-  let john_not_smith = Q!{
-    (User.first_name == "John") && (User.last_name != "Smith")
-  }.get(&conn);
-  ```
-  Note that `get` always returns a `Vec` of results.
+* Using derive macros for [`Queryable`](https://docs.rs/rejis/latest/rejis/query/trait.Queryable.html) and [`Table`](https://docs.rs/rejis/latest/rejis/table/trait.Table.html),
+  and the [`Q!`](https://docs.rs/rejis/latest/rejis/macros/macro.Q.html) macro DSL for building these queries. 
+  This is the fastest and simplest way.
 
-* **Deleting entries**
-  ```rust
-  // Delete all the Johns!
-  Q! {
-    User.first_name == "John"
-  }.delete(&conn);
-  ```
+  For examples of how this is done, see [tests/macro_query.rs](rejis/tests/macro_query.rs)
 
-# Roadmap
+* Using the derive macros above, but building your query yourself using only
+  Rust's type system.
+
+  For examples of how this is done, see [tests/filtering.rs](rejis/tests/filtering.rs)
+
+* By manually implementing [`Queryable`](https://docs.rs/rejis/latest/rejis/query/trait.Queryable.html) and [`Table`](https://docs.rs/rejis/latest/rejis/table/trait.Table.html), and constructing
+  your queries using only Rust's type system. This is the most cumbersome, but
+  also the least "magical" way of doing it, so if you're curious about how `rejis`
+  works under the hood, this is a good place to start.
+
+  For examples of how this is done, see [tests/no_magic.rs](rejis/tests/no_magic.rs)
+ 
+## Examples
+You can use the [`Database`](https://docs.rs/rejis/latest/rejis/executor/trait.Database.html) trait for creating simple single-column tables for holding
+objects of a certain type:
+
+**Setup**
+```rust
+use rejis::{Database, Queryable, Table};
+use serde::{Serialize, Deserialize};
+use rusqlite::Connection;
+
+#[derive(Queryable, Table, Serialize, Deserialize, Debug, Clone)]
+struct User {
+  first_name: String,
+  last_name: String,
+  pets: Vec<String>,
+  age: u8,
+}
+
+let conn = Connection::open_in_memory().unwrap();
+conn.init::<User>().unwrap();
+```
+With the database connection set up, and a table `user` created, you
+can start inserting objects:
+
+**Insertion**
+```rust
+// Add John Arbuckle with his pets to our database.
+conn.insert(&User {
+  first_name: String::from("Jon"),
+  last_name: String::from("Arbuckle"),
+  age: 29,
+  pets: vec![
+    String::from("Garfield"),
+    String::from("Odie"),
+  ],
+}).unwrap();
+
+// Throw in Sabrina too, so we know our filters work later.
+conn.insert(&User {
+  first_name: String::from("Sabrina"),
+  last_name: String::from("Spellman"),
+  age: 15,
+  pets: vec![
+    String::from("Salem"),
+  ],
+}).unwrap();
+```
+**Querying**
+```rust
+// `Q` is a macro used for building queries in a custom
+// domain-specific language which is designed to look
+// like standard logical operations for readability.
+use rejis::Q;
+
+// Find the pets of everyone in the 'Arbuckle' family
+let arbuckles = conn.get(&Q!{
+  User.last_name == "Arbuckle"
+}).unwrap();
+
+// We know Jon is our only result.
+assert_eq!(arbuckles.len(), 1);
+let jon = arbuckles.first().unwrap();
+assert_eq!(jon.pets, vec!["Garfield", "Odie"]);
+```
+This is pretty straight-forward, but what if our `User` object is actually massive?
+
+In that case, it'd be preferable to be able to *only* fetch the `pets` field!
+
+**Mapping**
+```rust
+// Transform trait implements the `.map(..)` function
+use crate::rejis::transform::Transform;
+
+// Find all the 'Arbuckle' families, and map the
+// resulting users to their own `pets` member.
+let arbuckle_pets = conn.get(
+  &Q!{
+    User.last_name == "Arbuckle"
+  }.map(&User::query().pets)
+).unwrap();
+
+// arbuckle_pets is a Vec<Vec<String>> since we're querying a
+// nested `pets: Vec<String>` from each `User`, and each user
+// is returned as its own result. Since `Jon` is the only
+// Arbuckle, we can just get his pets from the first result
+let jons_pets = arbuckle_pets.first().unwrap();
+assert_eq!(jons_pets.as_ref(), vec!["Garfield", "Odie"]);
+```
+This way we avoid having to extract and deserialize the entire
+Jon Arbuckle `User`, instead fetching only the data we care about.
+
+Satisfied with the list of pets, and wanting nothing more to do with
+Jon Arbuckle, we can move on to..
+
+**Deleting**
+```rust
+// Find all the 'Arbuckle' users...
+// And promptly delete them!
+let deleted_rows = conn.delete(&Q!{
+    User.last_name == "Arbuckle"
+}).unwrap();
+
+assert_eq!(deleted_rows, 1);
+```
+
+## Roadmap
 * **Updating/replacing entire entries**
   ```rust
   // Replace John Smith with Jane Doe
@@ -90,29 +173,16 @@ built on top of it, to reduce database roundtrips.
   })
   ```
 
-## Tentative features
-* **Query mapping** Almost implemented!
-
-  Right now the Query is only used for filtering, but the same structure
-  could be useful for optionally narrowing the selection retrieved from the database.
-  If all you're interesting in, is the first name of the user, then being able 
-  to do something like this could be useful:
-  ```rust
-  // Last names of everyone named John
-  let last_name: Vec<String> = Q! {
-    User.first_name == "John"
-  }.map(Q! { User.last_name }).get(&conn);
-  ```
-
+### Tentative features
 * **Partial updates**
 
   Using a filter for selection, a query for targeting, and a closure for manipulation,
-  a nice api could be made for highly selective updates 
+  a nice api could be made for highly selective updates
   ```rust
-  // Uppercase all the last names of people called John
+  // Uppercase all the last names of people called Jon
   db.modify(
     // Select specific rows
-    &Q! { User.first_name == "John" },
+    &Q! { User.first_name == "Jon" },
     // Target the last_name specifically for replacement
     &Q! { User.last_name },
     // Provide a function for how the name should be transformed.
@@ -142,6 +212,8 @@ built on top of it, to reduce database roundtrips.
   If you use `rejis` for storing users for example, it might be useful to be able to create
   an index over `json_extract(value, '$.id')` or `$.name`, if those are used to find users.
 
-# Shortcomings
-* Query paths only allow a single indexing element. 
+## Shortcomings
+* Query paths only allow a single indexing element.
   Reason for this is in the complexity of implementing the SQL CTE and the Q!-macro DSL support for that use case.
+
+<!-- cargo-rdme end -->

@@ -3,6 +3,7 @@ use crate::{
     Query, Queryable, Table,
 };
 
+/// Maps a field into a child field.
 pub struct Select<Field, Root, Inner>
 where
     Root: Table,
