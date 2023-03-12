@@ -2,6 +2,7 @@ mod database;
 pub mod filter;
 mod map;
 pub mod path;
+pub mod transform;
 
 pub use database::Database;
 

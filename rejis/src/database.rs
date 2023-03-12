@@ -3,14 +3,13 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Write;
 
 use crate::{
-    filter::Filter,
-    map::{Map, Select},
     query::{Queryable, Table},
+    transform::{FromRow, Transform},
 };
 
-fn sql_query_builder<Root: Table>(
+fn sql_query_builder(
     table_name: &str,
-    filter: &impl Filter<Root>,
+    filter: &impl Transform,
     selector: &str,
 ) -> Result<String, std::fmt::Error> {
     let mut sql = format!(
@@ -22,7 +21,7 @@ with
     )",
     );
 
-    filter.statement("result", &mut sql)?;
+    filter.cte("result", &mut sql)?;
 
     write!(&mut sql, "\n{selector}")?;
 
@@ -66,34 +65,30 @@ impl Database {
     }
 
     /// Fetch `Root` object(s) using the given filter
-    pub fn get<Root, Field, F>(
+    pub fn get<Root, Transformer>(
         &self,
-        filter: impl Into<Select<Field, Root, F>>,
-    ) -> Result<Vec<Field>, rusqlite::Error>
+        query: Transformer,
+    ) -> Result<Vec<<<Transformer as Transform>::Output as FromRow>::Output>, rusqlite::Error>
     where
         Root: Table + DeserializeOwned,
-        Field: Queryable<Root>,
-        F: Filter<Root>,
-        Select<Field, Root, F>: Map<Field, Root>,
+        Transformer: Transform,
     {
-        let select: Select<Field, Root, F> = filter.into();
-
-        let sql = sql_query_builder(Root::TABLE_NAME, &select, &select.selector()).unwrap();
+        let sql = sql_query_builder(Root::TABLE_NAME, &query, &query.statement()).unwrap();
 
         let mut stmt = self.0.prepare(&sql)?;
-        select.bind_parameters(&mut stmt, &mut 1)?;
+        query.bind(&mut stmt, &mut 1)?;
 
         let mut objects = Vec::new();
         let mut rows = stmt.raw_query();
         while let Some(result) = rows.next()? {
-            objects.push(select.extract(result).unwrap());
+            objects.push(query.extract(result).unwrap());
         }
 
         Ok(objects)
     }
 
     /// Delete `Root` object(s) using the given filter
-    pub fn delete<Root>(&self, filter: &impl Filter<Root>) -> Result<Vec<Root>, rusqlite::Error>
+    pub fn delete<Root>(&self, filter: &impl Transform) -> Result<Vec<Root>, rusqlite::Error>
     where
         Root: Table + DeserializeOwned,
     {
@@ -114,7 +109,7 @@ where exists (
         .unwrap();
 
         let mut stmt = self.0.prepare(&sql)?;
-        filter.bind_parameters(&mut stmt, &mut 1)?;
+        filter.bind(&mut stmt, &mut 1)?;
 
         let mut objects = Vec::new();
         let mut rows = stmt.raw_query();

@@ -1,35 +1,10 @@
 //! Structures used for applying filters to queries.
 use crate::{
-    map::Select,
     query::{Query, QueryConstructor, Queryable, Table},
+    transform::{FromRow, Transform},
 };
 use rusqlite::{Statement, ToSql};
-use std::fmt::{Debug, Display, Formatter, Write};
-
-/// Structure capable of producing a valid sql where-clause,
-/// and binding parameters to it.
-///
-/// See [`Comparison`] which generates singular `A = B` clauses
-/// or [`And`] which itself composes multiple such statements.
-pub trait Filter<Root: Table> {
-    fn bind_parameters(
-        &self,
-        statement: &mut Statement<'_>,
-        index: &mut usize,
-    ) -> Result<(), rusqlite::Error>;
-
-    fn statement(&self, name: &str, f: &mut impl Write) -> std::fmt::Result;
-
-    fn map<Field: Queryable<Root>>(self, query: &Query<Field, Root>) -> Select<Field, Root, Self>
-    where
-        Self: Sized,
-    {
-        Select {
-            filter: self,
-            selector: query.clone(),
-        }
-    }
-}
+use std::fmt::{Debug, Display, Formatter};
 
 /// [`Comparison`] operator.
 #[derive(Debug, Clone, Copy)]
@@ -100,24 +75,28 @@ where
     }
 }
 
-impl<Field, Root> Filter<Root> for Comparison<Field, Root>
+impl<Field, Root> Transform for Comparison<Field, Root>
 where
     Field: Queryable<Root>,
     Root: Table,
+    (Root,): FromRow,
     <Field::QueryType as QueryConstructor<Root>>::Inner: ToSql,
 {
-    fn bind_parameters(
+    type Root = Root;
+    type Field = Field;
+    type Output = (Root,);
+
+    fn bind(
         &self,
         statement: &mut Statement<'_>,
         index: &mut usize,
     ) -> Result<(), rusqlite::Error> {
         statement.raw_bind_parameter(*index, &self.value)?;
         *index += 1;
-
         Ok(())
     }
 
-    fn statement(&self, name: &str, f: &mut impl Write) -> std::fmt::Result {
+    fn cte(&self, name: &str, f: &mut impl std::fmt::Write) -> std::fmt::Result {
         write!(
             f,
             ",\n    {name} as (
@@ -129,38 +108,50 @@ where
             operator = self.operator
         )
     }
-}
 
-#[derive(Clone)]
-pub struct And<F>(pub F);
-
-impl<F: Debug> Debug for And<F>
-where
-    F: Debug,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("And").field(&self.0).finish()
+    fn statement(&self) -> String {
+        String::from("select result.value from result")
     }
 }
 
-impl<Root: Table, A, B> Filter<Root> for And<(A, B)>
+#[derive(Clone)]
+pub struct And<A, B>(pub A, pub B);
+
+impl<A, B> Debug for And<A, B>
 where
-    A: Filter<Root>,
-    B: Filter<Root>,
+    A: Debug,
+    B: Debug,
 {
-    fn bind_parameters(
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("And").field(&self.0).field(&self.1).finish()
+    }
+}
+
+impl<Root, Field, A, B> Transform for And<A, B>
+where
+    Root: Table,
+    (Root,): FromRow,
+    Field: Queryable<Root>,
+    A: Transform<Root = Root, Field = Field>,
+    B: Transform<Root = Root, Field = Field>,
+{
+    type Root = Root;
+    type Field = Field;
+    type Output = (Root,);
+
+    fn bind(
         &self,
         statement: &mut Statement<'_>,
         index: &mut usize,
     ) -> Result<(), rusqlite::Error> {
-        self.0 .0.bind_parameters(statement, index)?;
-        self.0 .1.bind_parameters(statement, index)?;
+        self.0.bind(statement, index)?;
+        self.1.bind(statement, index)?;
         Ok(())
     }
 
-    fn statement(&self, name: &str, f: &mut impl Write) -> std::fmt::Result {
-        self.0 .0.statement(&format!("{name}_a"), f)?;
-        self.0 .1.statement(&format!("{name}_b"), f)?;
+    fn cte(&self, name: &str, f: &mut impl std::fmt::Write) -> std::fmt::Result {
+        self.0.cte(&format!("{name}_a"), f)?;
+        self.1.cte(&format!("{name}_b"), f)?;
 
         write!(
             f,
@@ -175,43 +166,50 @@ where
 }
 
 #[derive(Clone)]
-pub struct Or<F>(pub F);
+pub struct Or<A, B>(pub A, pub B);
 
-impl<F: Debug> Debug for Or<F>
+impl<A, B> Debug for Or<A, B>
 where
-    F: Debug,
+    A: Debug,
+    B: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Or").field(&self.0).finish()
+        f.debug_tuple("Or").field(&self.0).field(&self.1).finish()
     }
 }
 
-impl<Root: Table, A, B> Filter<Root> for Or<(A, B)>
+impl<Root, Field, A, B> Transform for Or<A, B>
 where
-    A: Filter<Root>,
-    B: Filter<Root>,
+    Root: Table + FromRow,
+    Field: Queryable<Root>,
+    A: Transform<Root = Root, Field = Field>,
+    B: Transform<Root = Root, Field = Field>,
 {
-    fn bind_parameters(
+    type Root = Root;
+    type Field = Field;
+    type Output = Root;
+
+    fn bind(
         &self,
         statement: &mut Statement<'_>,
         index: &mut usize,
     ) -> Result<(), rusqlite::Error> {
-        self.0 .0.bind_parameters(statement, index)?;
-        self.0 .1.bind_parameters(statement, index)?;
+        self.0.bind(statement, index)?;
+        self.1.bind(statement, index)?;
         Ok(())
     }
 
-    fn statement(&self, name: &str, f: &mut impl Write) -> std::fmt::Result {
-        self.0 .0.statement(&format!("{name}_a"), f)?;
-        self.0 .1.statement(&format!("{name}_b"), f)?;
+    fn cte(&self, name: &str, f: &mut impl std::fmt::Write) -> std::fmt::Result {
+        self.0.cte(&format!("{name}_a"), f)?;
+        self.1.cte(&format!("{name}_b"), f)?;
 
         write!(
             f,
             ",\n    {name} as (
-        select * from {name}_a
-        union all
-        select * from {name}_b
-    )"
+    select * from {name}_a
+    union all
+    select * from {name}_b
+)"
         )
     }
 }
@@ -265,14 +263,18 @@ where
     }
 }
 
-impl<Field, InnerField, Root> Filter<Root> for Any<Field, InnerField, Root>
+impl<Field, InnerField, Root> Transform for Any<Field, InnerField, Root>
 where
     Field: Queryable<Root>,
     InnerField: Queryable<Root>,
-    Root: Table,
+    Root: Table + FromRow,
     <InnerField::QueryType as QueryConstructor<Root>>::Inner: ToSql,
 {
-    fn bind_parameters(
+    type Root = Root;
+    type Field = InnerField;
+    type Output = Root;
+
+    fn bind(
         &self,
         statement: &mut Statement<'_>,
         index: &mut usize,
@@ -283,7 +285,7 @@ where
         Ok(())
     }
 
-    fn statement(&self, name: &str, f: &mut impl Write) -> std::fmt::Result {
+    fn cte(&self, name: &str, f: &mut impl std::fmt::Write) -> std::fmt::Result {
         write!(
             f,
             ",\n    {name} as (

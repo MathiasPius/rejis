@@ -52,10 +52,10 @@ fn insert_and_query() {
     });
 
     let john_smith = db
-        .get(And((
+        .get::<User, _>(And(
             User::query().first_name.cmp(Equal, "John"),
             User::query().last_name.cmp(Equal, "Smith"),
-        )))
+        ))
         .unwrap();
 
     assert_eq!(john_smith.len(), 1);

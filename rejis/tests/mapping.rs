@@ -1,9 +1,6 @@
 #[cfg(feature = "derive")]
 mod mapping {
-    use rejis::{
-        filter::{Filter, Operator::Equal},
-        Table,
-    };
+    use rejis::{filter::Operator::Equal, transform::Transform, Table};
 
     use testutils::User;
 
@@ -98,7 +95,7 @@ mod mapping {
 
         // Find ages of all Johns
         let ages: Vec<u8> = db
-            .get(
+            .get::<User, _>(
                 User::query()
                     .first_name
                     .cmp(Equal, "John")

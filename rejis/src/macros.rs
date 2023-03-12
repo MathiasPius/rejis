@@ -22,18 +22,18 @@ macro_rules! Q {
     // AND operator support. Both sides of the comparison must be
     // enclosed in parentheses for macro parsing reasons.
     (($($head:tt)*) && ($($tail:tt)*)) => {
-        ::rejis::filter::And((
+        ::rejis::filter::And(
             Q!($($head)*),
             Q!($($tail)*),
-        ))
+        )
     };
     // OR operator support. Both sides of the comparison must be
     // enclosed in parentheses for macro parsing reasons.
     (($($head:tt)*) || ($($tail:tt)*)) => {
-        ::rejis::filter::Or((
+        ::rejis::filter::Or(
             Q!($($head)*),
             Q!($($tail)*),
-        ))
+        )
     };
     // Comparison with literals
     ($out:expr => $op:tt $value:literal) => {
