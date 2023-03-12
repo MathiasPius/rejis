@@ -3,12 +3,22 @@ use serde::de::DeserializeOwned;
 
 use crate::{map::Select, Query, Queryable, Table};
 
-#[derive(thiserror::Error, Debug)]
+#[derive(Debug)]
 pub enum TransformError {
-    #[error("failure while reading value from mapped row")]
-    Sql(#[from] rusqlite::Error),
-    #[error("failure while deserializing mapped value")]
-    Serde(#[from] serde_json::Error),
+    Sql(rusqlite::Error),
+    Serde(serde_json::Error),
+}
+
+impl From<rusqlite::Error> for TransformError {
+    fn from(value: rusqlite::Error) -> Self {
+        TransformError::Sql(value)
+    }
+}
+
+impl From<serde_json::Error> for TransformError {
+    fn from(value: serde_json::Error) -> Self {
+        TransformError::Serde(value)
+    }
 }
 
 pub trait Transform {
