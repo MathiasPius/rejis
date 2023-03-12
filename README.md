@@ -24,9 +24,9 @@ The API is currently in flux and subject to change.
 **rejis** uses `rusqlite` for interacting with a sqlite database.
 
 All top-level types are stored in a separate table as created by the
-[`Table`](https://docs.rs/rejis/latest/rejis/table/trait.Table.html) trait implementation for that type. 
-In most cases you will simply derive this trait automatically, and the 
-table will be a table with the same name as your type, but in lower case, 
+[`Table`](https://docs.rs/rejis/latest/rejis/table/trait.Table.html) trait implementation for that type.
+In most cases you will simply derive this trait automatically, and the
+table will be a table with the same name as your type, but in lower case,
 containing a single column named `value`.
 
 The `value` column contains the `serde_json` serialized contents of the
@@ -39,7 +39,7 @@ which can then be executed against a [`rusqlite::Connection`](rusqlite::Connecti
 Producing these queries can be done in one of three ways:
 
 * Using derive macros for [`Queryable`](https://docs.rs/rejis/latest/rejis/query/trait.Queryable.html) and [`Table`](https://docs.rs/rejis/latest/rejis/table/trait.Table.html),
-  and the [`Q!`](https://docs.rs/rejis/latest/rejis/macros/macro.Q.html) macro DSL for building these queries. 
+  and the [`Q!`](https://docs.rs/rejis/latest/rejis/macros/macro.Q.html) macro DSL for building these queries.
   This is the fastest and simplest way.
 
   For examples of how this is done, see [tests/macro_query.rs](rejis/tests/macro_query.rs)
