@@ -5,7 +5,7 @@
 //! time up front translating between complex nested structures and sqlite tables.
 //!
 //! Rejis is *not* an ORM, as it completely disregards the *relational* benefits of a database, and
-//! inst//! ead abuses sqlite as a sort of low-performance on-disk `Vec`, with some sql-aware abstractions
+//! instead abuses sqlite as a sort of low-performance on-disk `Vec`, with some sql-aware abstractions
 //! built on top of it, to reduce database roundtrips.
 //!
 //! The API is currently in flux and subject to change.
