@@ -31,22 +31,23 @@ built on top of it, to reduce database roundtrips.
     age: u8,
   }
 
-  let db = Database::new(Connection::open_in_memory()?);
-  db.create_table::<User>()?;
+  let conn = Connection::open_in_memory()?;
+  // Creates the table to hold Users
+  User::init(&conn).unwrap();?;
   ```
   The type must implement all the listed traits. Other types nested within the top-level struct (User in this case),
   must also implement all the listed traits, with the exception of `Table`.
 
 * **Inserting structs**
   ```rust
-  db.insert(User {
+  User {
       first_name: String::from("John"),
       last_name: String::from("Smith"),
       age: 32,
       pets: vec![
         String::from("Garfield"),
       ],
-  });
+  }.insert(&conn);
   ```
   Note that the struct is just inserted as a serialized value in the table specified by the `Table` implementation
   and no effort or constraints are placed on it, meaning a table can easily have multiple identical objects, if the
@@ -56,35 +57,34 @@ built on top of it, to reduce database roundtrips.
 
   Filtering can either be done using the plain Query API:
   ```rust
-  let john_not_smith = db
-    .get(&And((
+  let john_not_smith = And(
       User::query().first_name.cmp(Equal, "John"),
       User::query().last_name.cmp(NotEqual, "Smith"),
-    )))?;
+    ).get(&conn);
   ```
   Or using the DSL implemented by the `Q!` macro:
   ```rust
-  let john_not_smith = db.get(&Q!{
+  let john_not_smith = Q!{
     (User.first_name == "John") && (User.last_name != "Smith")
-  })?;
+  }.get(&conn);
   ```
-  Note that `db.get` always returns a `Vec` of results.
+  Note that `get` always returns a `Vec` of results.
 
 * **Deleting entries**
   ```rust
   // Delete all the Johns!
-  db.delete(&Q! {
+  Q! {
     User.first_name == "John"
-  });
+  }.delete(&conn);
   ```
 
 # Roadmap
 * **Updating/replacing entire entries**
   ```rust
   // Replace John Smith with Jane Doe
-  db.replace(&Q! {
+  Q! {
     (User.first_name == "John") && (User.last_name == "Smith")
-  }, User {
+  }.replace(&conn, User {
     first_name: "Jane".to_string(),
     last_name: "Doe".to_string(),
   })
@@ -99,9 +99,9 @@ built on top of it, to reduce database roundtrips.
   to do something like this could be useful:
   ```rust
   // Last names of everyone named John
-  let last_name: Vec<String> = db
-    .get(&Q! { User.first_name == "John" })
-    .map(&Q! { User.last_name });
+  let last_name: Vec<String> = Q! {
+    User.first_name == "John"
+  }.map(Q! { User.last_name }).get(&conn);
   ```
 
 * **Partial updates**
