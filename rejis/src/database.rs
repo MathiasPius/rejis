@@ -50,13 +50,13 @@ pub trait Database {
 
 impl Database for Connection {
     fn init<Root: Table>(&self) -> Result<usize, rusqlite::Error> {
-        Ok(self.execute(
+        self.execute(
             &format!(
                 "create table if not exists {table} (value text not null) strict;",
                 table = Root::TABLE_NAME
             ),
             (),
-        )?)
+        )
     }
 
     fn insert<Root: Table>(&self, value: &Root) -> Result<usize, TransformError> {

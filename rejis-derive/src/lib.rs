@@ -41,7 +41,7 @@ fn impl_field_query(ident: &Ident, fields: &Fields) -> TokenStream {
     quote! {
         impl<Root: ::rejis::Table> ::rejis::QueryConstructor<Root> for #query_ident<Root> {
             type Inner = #ident;
-            fn new<Field: ::rejis::Queryable<Root>>(path: &::rejis::path::Path) -> Self {
+            fn new<Field: ::rejis::Queryable<Root>>(path: &::rejis::Path) -> Self {
                 #query_ident {
                     #(#fields)*
                 }

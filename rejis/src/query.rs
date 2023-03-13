@@ -1,14 +1,85 @@
 //!
 use rusqlite::ToSql;
+use serde::{de::DeserializeOwned, Serialize};
+
+pub mod path {
+    use std::fmt::Display;
+
+    #[derive(Debug, Clone)]
+    pub enum PathElement {
+        Field(&'static str),
+        Index(usize),
+    }
+
+    impl Display for PathElement {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                PathElement::Field(field) => {
+                    write!(f, ".{field}")
+                }
+                PathElement::Index(index) => {
+                    write!(f, "[{index}]")
+                }
+            }
+        }
+    }
+
+    impl From<usize> for PathElement {
+        fn from(value: usize) -> Self {
+            PathElement::Index(value)
+        }
+    }
+
+    impl From<&'static str> for PathElement {
+        fn from(value: &'static str) -> Self {
+            PathElement::Field(value)
+        }
+    }
+
+    #[derive(Default, Debug, Clone)]
+    pub struct Path(Vec<PathElement>);
+
+    impl Path {
+        pub fn join<P: Into<PathElement>>(&self, element: P) -> Self {
+            let mut path = self.0.clone();
+            path.push(element.into());
+            Path(path)
+        }
+    }
+
+    impl Display for Path {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("$")?;
+            for field in &self.0 {
+                write!(f, "{field}")?;
+            }
+
+            Ok(())
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::Path;
+
+        #[test]
+        fn build_path() {
+            let path = Path::default().join("pets").join(0).join("name");
+
+            assert_eq!(path.to_string(), "$.pets[0].name");
+        }
+    }
+}
 
 use crate::{
     filter::{Any, Comparison, Operator},
-    path::Path,
     Table,
 };
 use std::{fmt::Debug, marker::PhantomData, ops::Deref};
 
-/// Indicates the `FieldQuery` struct which describes the json structure
+pub use self::path::Path;
+
+/// Indicates the `QueryConstructor` struct which describes the json structure
 /// of the object.
 ///
 /// You will want to implement this trait for any object which you want to
@@ -17,7 +88,7 @@ use std::{fmt::Debug, marker::PhantomData, ops::Deref};
 /// describing said member.
 ///
 /// Can (and should) be automatically derived when possible.
-pub trait Queryable<Root>: Clone + 'static
+pub trait Queryable<Root>: Serialize + DeserializeOwned + Clone + 'static
 where
     Root: Table,
 {
@@ -138,11 +209,11 @@ where
 }
 
 /// This is a hack, allowing us to step right through the `Query` abstraction
-/// into the sub-field `FieldQuery`.
+/// into the sub-field `QueryConstructor`.
 ///
 /// This allows us to keep metadata about the query around through
 /// the [`Query`] struct, without having to write boilerplate in all
-/// the implementations of `FieldQuery`.
+/// the implementations of `QueryConstructor`.
 ///
 /// It is also necessary in order to be able to write functions such as
 /// `Database::get`, which take the generic `Query` object as a parameter.
@@ -165,7 +236,7 @@ pub trait QueryConstructor<Root>
 where
     Root: Table,
 {
-    type Inner;
+    type Inner: Serialize + DeserializeOwned;
 
     /// Given the parent path `path` and a `Queryable` type `Field`, construct
     /// an instance of the `Field`'s `Queryable` type.

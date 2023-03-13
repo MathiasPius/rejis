@@ -317,7 +317,6 @@
 //!
 pub mod filter;
 mod map;
-pub mod path;
 pub mod transform;
 
 mod table;

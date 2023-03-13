@@ -25,7 +25,7 @@ impl<Root: Table> Queryable<Root> for Pet {
 impl<Root: Table> QueryConstructor<Root> for PetQuery<Root> {
     type Inner = User;
 
-    fn new<Field>(path: &rejis::path::Path) -> Self
+    fn new<Field>(path: &rejis::Path) -> Self
     where
         Field: Queryable<Root>,
     {
@@ -57,7 +57,7 @@ struct UserQuery<Root: Table> {
 impl<Root: Table> QueryConstructor<Root> for UserQuery<Root> {
     type Inner = User;
 
-    fn new<Field>(path: &rejis::path::Path) -> Self
+    fn new<Field>(path: &rejis::Path) -> Self
     where
         Field: Queryable<Root>,
     {
