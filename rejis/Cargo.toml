@@ -19,3 +19,7 @@ rusqlite = { version = "0.28", features = ["bundled"] }
 default = ["derive", "macros"]
 derive = ["rejis-derive"]
 macros = []
+
+
+[dev-dependencies]
+rejis-test-data = { version = "0.1.0", path = "../rejis-test-data" }

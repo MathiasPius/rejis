@@ -324,7 +324,7 @@ mod table;
 pub use table::Table;
 
 mod executor;
-pub use executor::{Database, Executor};
+pub use executor::Database;
 
 #[cfg(feature = "derive")]
 pub use rejis_derive::{Queryable, Table};

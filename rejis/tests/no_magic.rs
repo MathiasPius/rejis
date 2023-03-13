@@ -3,7 +3,7 @@ use rejis::{
         And,
         Operator::{self, Equal},
     },
-    Executor, Query, QueryConstructor, Queryable, Table,
+    Database, Query, QueryConstructor, Queryable, Table,
 };
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
@@ -78,24 +78,23 @@ impl Table for User {
 fn insert_and_query() {
     let db = Connection::open_in_memory().unwrap();
 
-    User::init(&db).unwrap();
+    db.init::<User>().unwrap();
 
-    User {
+    db.insert(&User {
         first_name: String::from("John"),
         last_name: String::from("Smith"),
         pets: vec![Pet {
             name: String::from("Garfield"),
         }],
-    }
-    .insert(&db)
+    })
     .unwrap();
 
-    let john_smith = And(
-        User::query().first_name.cmp(Equal, "John"),
-        User::query().last_name.cmp(Equal, "Smith"),
-    )
-    .get(&db)
-    .unwrap();
+    let john_smith = db
+        .get(&And(
+            User::query().first_name.cmp(Equal, "John"),
+            User::query().last_name.cmp(Equal, "Smith"),
+        ))
+        .unwrap();
 
     assert_eq!(john_smith.len(), 1);
     assert_eq!(john_smith[0].first_name, "John");
@@ -106,16 +105,15 @@ fn insert_and_query() {
 fn filter_deletion() {
     let db = Connection::open_in_memory().unwrap();
 
-    User::init(&db).unwrap();
+    db.init::<User>().unwrap();
 
-    User {
+    db.insert(&User {
         first_name: String::from("John"),
         last_name: String::from("Smith"),
         pets: vec![Pet {
             name: String::from("Jimmy"),
         }],
-    }
-    .insert(&db)
+    })
     .unwrap();
 
     let smiths_with_jimmies =
@@ -123,12 +121,12 @@ fn filter_deletion() {
             .pets
             .any(|pet| pet.name.clone(), Operator::Equal, "Jimmy");
 
-    let jane = smiths_with_jimmies.get(&db).unwrap();
+    let jane = db.get(&smiths_with_jimmies).unwrap();
     assert_eq!(jane.len(), 1);
 
-    smiths_with_jimmies.delete(&db).unwrap();
+    db.delete(&smiths_with_jimmies).unwrap();
 
-    let jane = smiths_with_jimmies.get(&db).unwrap();
+    let jane = db.get(&smiths_with_jimmies).unwrap();
     assert_eq!(jane.len(), 0);
 }
 
@@ -138,10 +136,7 @@ fn query_uninitialized_table() {
 
     // Attempt to fetch a user from a database which has
     // not been initialized with a user table.
-    User::query()
-        .first_name
-        .cmp(Operator::Equal, "Jimmy")
-        .get(&db)
+    db.get(&User::query().first_name.cmp(Operator::Equal, "Jimmy"))
         .unwrap_err();
 }
 

@@ -130,6 +130,7 @@ name = "rejis"
 version = "0.1.0"
 dependencies = [
  "rejis-derive",
+ "rejis-test-data",
  "rusqlite",
  "serde",
  "serde_json",
@@ -142,6 +143,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "rejis-test-data"
+version = "0.1.0"
+dependencies = [
+ "rejis",
+ "rusqlite",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

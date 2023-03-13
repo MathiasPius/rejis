@@ -1,2 +1,6 @@
 [workspace]
-members = ["rejis", "rejis-derive"]
+members = [
+    "rejis",
+    "rejis-derive",
+    "rejis-test-data",
+]
