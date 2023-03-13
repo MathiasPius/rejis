@@ -47,7 +47,7 @@
 //!   For examples of how this is done, see [tests/no_magic.rs](rejis/tests/no_magic.rs)
 //!  
 //! # Examples
-//! You can use the [`Database`](crate::executor::Database) trait for creating simple single-column tables for holding
+//! You can use the [`Database`](crate::database::Database) trait for creating simple single-column tables for holding
 //! objects of a certain type:
 //!
 //! **Setup**
@@ -323,8 +323,8 @@ pub mod transform;
 mod table;
 pub use table::Table;
 
-mod executor;
-pub use executor::Database;
+mod database;
+pub use database::Database;
 
 #[cfg(feature = "derive")]
 pub use rejis_derive::{Queryable, Table};

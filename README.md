@@ -15,7 +15,7 @@ The purpose of this is to be able to use sqlite as a persistent store of data wi
 time up front translating between complex nested structures and sqlite tables.
 
 Rejis is *not* an ORM, as it completely disregards the *relational* benefits of a database, and
-inst//! ead abuses sqlite as a sort of low-performance on-disk `Vec`, with some sql-aware abstractions
+instead abuses sqlite as a sort of low-performance on-disk `Vec`, with some sql-aware abstractions
 built on top of it, to reduce database roundtrips.
 
 The API is currently in flux and subject to change.
@@ -57,7 +57,7 @@ Producing these queries can be done in one of three ways:
   For examples of how this is done, see [tests/no_magic.rs](rejis/tests/no_magic.rs)
  
 ## Examples
-You can use the [`Database`](https://docs.rs/rejis/latest/rejis/executor/trait.Database.html) trait for creating simple single-column tables for holding
+You can use the [`Database`](https://docs.rs/rejis/latest/rejis/database/trait.Database.html) trait for creating simple single-column tables for holding
 objects of a certain type:
 
 **Setup**
